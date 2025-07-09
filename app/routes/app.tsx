@@ -27,8 +27,9 @@ export default function App() {
         </Link>
         {/* <Link to="/app/additional">Additional page</Link> */}
         <Link to="/app/settings">⚙️ Settings</Link>
-        <Link to="/app/samplepage">? _sample page_</Link>
-        <Link to="/app/additional">? _additional page_</Link>
+        <Link to="/app/privacy">📜 Privacy Policy</Link>
+        <Link to="/app/tos">📜 ToS</Link>
+        <Link to="/app/plans">📜 Plans</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
