@@ -1,4 +1,5 @@
 import "@shopify/shopify-app-remix/adapters/node";
+import type { Session } from "@shopify/shopify-app-remix/server";
 import {
   ApiVersion,
   AppDistribution,
@@ -6,6 +7,7 @@ import {
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
+// import { mongoClientPromise } from "./utils/mongoclient";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -18,7 +20,14 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
-    removeRest: true,
+    // removeRest: true, // removed for the subscription logic.
+  },
+  hooks: {
+    afterAuth: async ({ session }: { session: Session }) => {
+      console.log("After Auth:");
+      // console.log("- Access Token:", session.accessToken);
+      // console.log("- Shop:", session.shop);
+    },
   },
   ...(process.env.SHOP_CUSTOM_DOMAIN
     ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
