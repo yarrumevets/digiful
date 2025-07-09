@@ -6,7 +6,6 @@ import {
   Text,
   BlockStack,
   Image,
-  // Link,
   TextField,
   InlineStack,
 } from "@shopify/polaris";
@@ -19,19 +18,52 @@ import {
   useActionData,
   useFetcher,
 } from "@remix-run/react";
+
+// Import Custom Code
 import { authenticate } from "app/shopify.server";
 import { mongoClientPromise } from "app/utils/mongoclient";
 import { decrypt, encrypt } from "app/utils/encrypt";
 import { s3CredsTest } from "app/utils/s3";
-
-// Constants to put in configs later @TODO
-const dbName = "digiful";
-const merchantCollection = "merchants";
+import { subscriptionPlans, planNameLookup } from "./config/subscriptions";
+import { userFriendlyDate } from "app/utils/utilities";
 
 // Loader
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // Get Shopify GraphQL data:
   const { admin, session } = await authenticate.admin(request);
+  const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
+  const DB_NAME = "" + process.env.DB_NAME;
+
+  // Get subscription/plan data
+  const response = await admin.graphql(`
+  query {
+    appInstallation {
+      activeSubscriptions {
+        id
+        status
+        name,
+        createdAt,
+        currentPeriodEnd
+      }
+    }
+  }
+`);
+  const subscriptionData = (await response.json()).data;
+  const hasActiveSubscription =
+    subscriptionData.appInstallation.activeSubscriptions.length > 0;
+  let subscriptionStatus,
+    planName,
+    subscriptionCreatedAt,
+    subscriptionCurrentPeriodEnd;
+  if (hasActiveSubscription) {
+    ({
+      status: subscriptionStatus,
+      name: planName,
+      createdAt: subscriptionCreatedAt,
+      currentPeriodEnd: subscriptionCurrentPeriodEnd,
+    } = subscriptionData.appInstallation.activeSubscriptions[0]);
+  }
+
+  // Get Shopify data:
   const res = await admin.graphql(`query { shop { id name } }`);
   const shopifyData = (await res.json()).data;
   const shopName = shopifyData.shop.name;
@@ -40,32 +72,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shopId = shopifyData.shop.id.split("/").pop();
   // Get digiful MongoDB data:
   const client = await mongoClientPromise;
-  const db = client.db(dbName);
+  const db = client.db(DB_NAME);
   const mongoData = await db
-    .collection(merchantCollection)
+    .collection(MERCHANT_COLLECTION)
     .findOne({ shopId: shopId });
-  // Create the user account document in Mongo if not found.
-  if (!mongoData) {
-    console.log("Creating new account...");
-    const createAccountResult = await db
-      .collection(merchantCollection)
-      .insertOne({
-        shopId: shopId,
-        createdAt: new Date(),
-        accountStatus: "Active",
-      });
-    if (createAccountResult.acknowledged === false) {
-      console.error(
-        "Error creating new MongoDB document for new user account!",
-      );
-    }
-    // .... @TODO: make sure this works with the rest of the flow.
-  }
-
-  // // Decrypt the stored s3 key
-  // const s3secretAccessKey = mongoData?.s3secretAccessKey;
-  // const decryptedKey = decrypt(s3secretAccessKey);
-  // console.log("decrypted key: ", decryptedKey);
 
   const createdAt =
     mongoData && "createdAt" in mongoData
@@ -76,23 +86,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       ? (mongoData.accountStatus as string)
       : undefined;
   const s3AccessKeyId =
-    mongoData && "s3AccessKeyId" in mongoData
-      ? (mongoData.s3AccessKeyId as string)
+    mongoData?.s3 && "s3AccessKeyId" in mongoData.s3
+      ? (mongoData.s3.s3AccessKeyId as string)
       : "";
-  const s3bucketName =
-    mongoData && "s3bucketName" in mongoData
-      ? (mongoData.s3bucketName as string)
+  const s3BucketName =
+    mongoData?.s3 && "s3BucketName" in mongoData.s3
+      ? (mongoData.s3.s3BucketName as string)
       : "";
-  const s3secretAccessKey =
-    mongoData && "s3secretAccessKey" in mongoData
-      ? (mongoData.s3secretAccessKey as { iv: string; content: string })
+  const s3SecretAccessKey =
+    mongoData?.s3 && "s3SecretAccessKey" in mongoData.s3
+      ? (mongoData.s3.s3SecretAccessKey as { iv: string; content: string })
       : { iv: "", content: "" };
   const s3Region =
-    mongoData && "s3Region" in mongoData ? (mongoData.s3Region as string) : "";
+    mongoData?.s3 && "s3Region" in mongoData.s3
+      ? (mongoData.s3.s3Region as string)
+      : "";
   const s3CredsTestSuccess =
-    mongoData && "s3CredsTestSuccess" in mongoData
-      ? (mongoData.s3CredsTestSuccess as boolean)
+    mongoData?.s3 && "s3CredsTestSuccess" in mongoData.s3
+      ? (mongoData.s3.s3CredsTestSuccess as boolean)
       : null;
+
+  console.log("s3 object: ", s3CredsTestSuccess);
 
   // @TODO move this somewhere in utils ?
   const maskKey = (key: string) => {
@@ -110,10 +124,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     createdAt: string;
     accountStatus: string;
     s3AccessKeyIdMasked: string;
-    s3bucketName: string;
+    s3BucketName: string;
     hasS3SecretAccessKey: boolean;
     s3Region: string;
     s3CredsTestSuccess: boolean | null;
+    // Subscription stuff.
+    subscriptionStatus: string | null;
+    planName: string | null;
+    subscriptionCreatedAt: string | null;
+    subscriptionCurrentPeriodEnd: string | null;
   } = {
     shopName,
     shopSlug,
@@ -122,87 +141,144 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       createdAt instanceof Date ? createdAt.toISOString() : (createdAt ?? ""),
     accountStatus: accountStatus || "",
     s3AccessKeyIdMasked: maskKey(s3AccessKeyId),
-    s3bucketName,
+    s3BucketName,
     hasS3SecretAccessKey:
-      s3secretAccessKey?.iv.length > 0 && s3secretAccessKey?.content.length > 0,
+      s3SecretAccessKey?.iv.length > 0 && s3SecretAccessKey?.content.length > 0,
     s3Region,
     s3CredsTestSuccess,
+    subscriptionStatus,
+    planName,
+    subscriptionCreatedAt,
+    subscriptionCurrentPeriodEnd,
   };
 
   return Response.json(responseData);
 };
 
-// Action
+// --------------------------------- Action ----------------------------------------------
 export const action = async ({ request }: ActionFunctionArgs) => {
-  // Another way to get shopID
-  // const { session } = await authenticate.admin(request);
-  //const shopDomain = session.shop;
-  // Get Shopify GraphQL data:
-  const { admin } = await authenticate.admin(request); // { admin , session }
+  const { admin, session } = await authenticate.admin(request); // { admin , session }
+  const DB_NAME = process.env.DB_NAME;
+  const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
   const res = await admin.graphql(`query { shop { id name } }`);
   const shopifyData = (await res.json()).data;
-  // const shopName = shopifyData.shop.name;
-  // const shopSlug = shopDomain.replace(".myshopify.com", "");
   const shopId = shopifyData.shop.id.split("/").pop();
+
   const actions = {
+    createSubscription: async (formData: FormData) => {
+      const planKey = formData.get("subscriptionPlan") as string;
+      // Validate.
+      if (!(planKey in subscriptionPlans)) {
+        return Response.json({
+          success: false,
+          action: "createSubscription",
+          error: "Plan not found",
+        });
+      }
+      const plan = subscriptionPlans[planKey as keyof typeof subscriptionPlans];
+      const returnUrl =
+        process.env.SHOPIFY_APP_URL +
+        "?shop=" +
+        session.shop +
+        "&host=" +
+        Buffer.from(session.shop + "/admin").toString("base64");
+      // @TODO: ! REMOVE test: true from here !
+      const subscription = await admin.graphql(`
+          mutation {
+            appSubscriptionCreate(
+              test: true
+              name: "${plan.name}"
+              returnUrl: "${returnUrl}"
+              lineItems: [{
+                plan: {
+                  appRecurringPricingDetails: {
+                    price: { amount: ${plan.price}, currencyCode: ${plan.currency} }
+                  }
+                }
+              }]
+            ) {
+              confirmationUrl
+            }
+          }
+        `);
+      const result = await subscription.json();
+      return Response.json({
+        redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
+      });
+    },
+    cancelSubscription: async () => {
+      const response = await admin.graphql(
+        `query { appInstallation { activeSubscriptions { id } } }`,
+      );
+      const { data } = await response.json();
+      const subscriptionId = data.appInstallation.activeSubscriptions[0].id;
+      const cancelSubRes = await admin.graphql(`
+        mutation {
+          appSubscriptionCancel(id: "${subscriptionId}") {
+            appSubscription { id status }
+          }
+        }
+      `);
+      const cancelSubResData = await cancelSubRes.json();
+      console.log("RES 2 DATA: ", cancelSubResData); // @TODO: log and save in merchant DB.
+      return null;
+    },
     saveS3Settings: async (formData: FormData) => {
       const s3AccessKeyId = formData.get("s3AccessKeyId");
-      const s3secretAccessKeyRaw = formData.get("s3secretAccessKey");
-      const s3bucketName = formData.get("s3bucketName");
+      const s3SecretAccessKeyRaw = formData.get("s3SecretAccessKey");
+      const s3BucketName = formData.get("s3BucketName");
       const s3Region = formData.get("s3Region");
       const client = await mongoClientPromise;
-      const db = client.db(dbName);
+      const db = client.db(DB_NAME);
       const searchFor = { shopId };
-
-      if (typeof s3secretAccessKeyRaw !== "string")
+      if (typeof s3SecretAccessKeyRaw !== "string")
         throw new Error("Expected string");
-      const s3secretAccessKey = encrypt(s3secretAccessKeyRaw);
+      const s3SecretAccessKey = encrypt(s3SecretAccessKeyRaw);
       const upsertData = {
-        s3AccessKeyId,
-        s3secretAccessKey,
-        s3bucketName,
-        s3Region,
-        s3CredsTestSuccess: null, // reset test results.
+        s3: {
+          s3AccessKeyId,
+          s3SecretAccessKey,
+          s3BucketName,
+          s3Region,
+          s3CredsTestSuccess: null, // reset test results.
+        },
       };
       await db
-        .collection(merchantCollection)
+        .collection(MERCHANT_COLLECTION)
         .updateOne(searchFor, { $set: upsertData });
       return Response.json({ action: "saveS3Settings", success: true });
     },
     s3CredsTest: async () => {
       const client = await mongoClientPromise;
-      const db = client.db(dbName);
+      const db = client.db(DB_NAME);
       const mongoData = await db
-        .collection(merchantCollection)
+        .collection(MERCHANT_COLLECTION)
         .findOne({ shopId });
       if (!mongoData) {
         throw new Error("No MongoDB document found for this shopId");
       }
-      const { s3secretAccessKey, s3AccessKeyId, s3bucketName, s3Region } =
-        mongoData;
+      const { s3SecretAccessKey, s3AccessKeyId, s3BucketName, s3Region } =
+        mongoData.s3;
       // Decrypt the s3 secret access key
-      const decryptedS3SecretAccessKey = decrypt(s3secretAccessKey);
+      const decryptedS3SecretAccessKey = decrypt(s3SecretAccessKey);
       const s3CredsTestSuccess = await s3CredsTest(
         s3AccessKeyId,
         decryptedS3SecretAccessKey,
-        s3bucketName,
+        s3BucketName,
         s3Region,
       );
       if (s3CredsTestSuccess) {
         // Save success
         await db
-          .collection(merchantCollection)
-          .updateOne({ shopId }, { $set: { s3CredsTestSuccess: true } });
+          .collection(MERCHANT_COLLECTION)
+          .updateOne({ shopId }, { $set: { "s3.s3CredsTestSuccess": true } });
       }
       return { action: "s3CredsTest", s3CredsTestSuccess: s3CredsTestSuccess };
     },
   } as const;
-
+  // Form response
   const formData = await request.formData();
   const actionType = formData.get("actionType") as string;
-
-  console.log("ActionType: ", actionType);
-
   const handler = actions[actionType as keyof typeof actions];
   if (handler) return await handler(formData);
   return null;
@@ -212,12 +288,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function SettingsPage() {
   const loaderData = useLoaderData<typeof loader>();
   const shopify = useAppBridge();
-
   const fetcher = useFetcher();
   const isLoading = fetcher.state === "submitting";
-
-  // Handle the result of an action:
   const actionData = useActionData<typeof action>();
+  // Redirect to the subscriptions form when user clicks a plan button.
+  useEffect(() => {
+    if (actionData?.redirectUrl) {
+      window.open(actionData.redirectUrl, "_top");
+    }
+  }, [actionData]);
 
   const [s3AccessKeyId, setS3AccessKeyId] = useState<string>("");
   const [s3SecretAccessKey, setS3SecretAccessKey] = useState<string>("");
@@ -229,17 +308,54 @@ export default function SettingsPage() {
   const [s3AccessKeyIdMasked, setS3AccessKeyIdMasked] = useState<string>("");
   const [hasS3SecretAccessKey, setHasS3SecretAccessKey] =
     useState<boolean>(false);
+  const [hasAllAwsCreds, setHasAllAwsCreds] = useState<boolean>(false);
+  const [hasActiveSubscription, setHasActiveSubscription] =
+    useState<boolean>(false);
+
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>("");
+  type PlanNameKey = keyof typeof planNameLookup;
+  const [planName, setPlanName] = useState<PlanNameKey>("hostedBasic");
+  const [subscriptionCreatedAt, setSubscriptionCreatedAt] =
+    useState<string>("");
+  const [subscriptionCurrentPeriodEnd, setSubscriptionCurrentPeriodEnd] =
+    useState<string>("");
+  type PlanDetails = {
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    frequency: string;
+    selfHosted?: boolean;
+    [key: string]: any;
+  };
+  const [planDetails, setPlanDetails] = useState<PlanDetails>(
+    {} as PlanDetails,
+  );
 
   useEffect(() => {
-    console.log("loader-data: ", loaderData);
     setS3AccessKeyId(loaderData.setS3AccessKeyId);
     setS3SecretAccessKey(loaderData.setS3SecretAccessKey);
-    setS3BucketName(loaderData.s3bucketName);
+    setS3BucketName(loaderData.s3BucketName);
     setS3Region(loaderData.s3Region);
     setS3CredsTestSuccess(loaderData.s3CredsTestSuccess);
     setS3AccessKeyIdMasked(loaderData.s3AccessKeyIdMasked);
     setHasS3SecretAccessKey(loaderData.hasS3SecretAccessKey);
-  }, [loaderData]);
+    setHasAllAwsCreds(
+      !!loaderData.s3AccessKeyIdMasked &&
+        !!loaderData.hasS3SecretAccessKey &&
+        !!loaderData.s3BucketName &&
+        !!loaderData.s3Region,
+    );
+    setHasActiveSubscription(loaderData.subscriptionStatus === "ACTIVE");
+    setSubscriptionStatus(loaderData.subscriptionStatus);
+    setPlanName(loaderData.planName);
+    setSubscriptionCreatedAt(loaderData.subscriptionCreatedAt);
+    setSubscriptionCurrentPeriodEnd(loaderData.subscriptionCurrentPeriodEnd);
+    const lookupKey = planNameLookup[
+      planName
+    ] as keyof typeof subscriptionPlans;
+    setPlanDetails(subscriptionPlans[lookupKey]);
+  }, [loaderData, planName]);
 
   useEffect(() => {
     if (actionData) {
@@ -277,158 +393,275 @@ export default function SettingsPage() {
 
             <Card>
               <BlockStack gap="1000">
-                <BlockStack gap="200">
-                  <InlineStack align="space-between">
-                    <Text variant="headingXl" as="h4">
-                      🪣 AWS Credentials (Required)
-                    </Text>
-                    <a href="https://aws.amazon.com/s3/">
-                      <img
-                        src="https://d0.awsstatic.com/logos/powered-by-aws.png"
-                        alt="Powered by AWS Cloud Computing"
-                        style={{ width: "100px" }}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </a>
-                  </InlineStack>
-                  <Form method="post">
-                    <BlockStack gap="200">
-                      <input
-                        type="hidden"
-                        name="actionType"
-                        value="saveS3Settings"
-                      />
-                      <TextField
-                        label="S3 Access Key ID:"
-                        name="s3AccessKeyId"
-                        value={s3AccessKeyId}
-                        placeholder={s3AccessKeyIdMasked}
-                        onChange={setS3AccessKeyId}
-                        autoComplete="off"
-                        disabled={false}
-                      />
-                      <TextField
-                        label="S3 Secret Access Key:"
-                        name="s3secretAccessKey"
-                        value={s3SecretAccessKey}
-                        onChange={setS3SecretAccessKey}
-                        placeholder={
-                          hasS3SecretAccessKey
-                            ? "****************************************"
-                            : ""
-                        }
-                        autoComplete="off"
-                        disabled={false}
-                        type="password"
-                      />
-                      <TextField
-                        label="S3 Bucket Name:"
-                        name="s3bucketName"
-                        value={s3BucketName}
-                        onChange={setS3BucketName}
-                        autoComplete="off"
-                        disabled={false}
-                      />
+                <BlockStack gap="400">
+                  {hasActiveSubscription ? (
+                    <BlockStack>
+                      <Text variant="headingXl" as="h4">
+                        Your Plan
+                      </Text>
+                      <Form method="post">
+                        <input
+                          type="hidden"
+                          name="actionType"
+                          value="cancelSubscription"
+                        />
 
-                      <TextField
-                        label="S3 Region:"
-                        name="s3Region"
-                        value={s3Region}
-                        onChange={setS3Region}
-                        autoComplete="off"
-                        disabled={false}
-                      />
-
-                      <Button
-                        loading={isLoading}
-                        disabled={
-                          !(
-                            s3AccessKeyId &&
-                            s3SecretAccessKey &&
-                            s3BucketName &&
-                            s3Region
-                          )
-                        }
-                        submit
-                      >
-                        Update
-                      </Button>
+                        <ul>
+                          <li>
+                            Plan: <strong>{planName}</strong>
+                          </li>
+                          <li>
+                            Subscription Status:{" "}
+                            {subscriptionStatus === "ACTIVE"
+                              ? "✅ Active"
+                              : `⚠️${subscriptionStatus}`}
+                          </li>
+                          <li>
+                            Created on:{" "}
+                            {userFriendlyDate(subscriptionCreatedAt)}
+                          </li>
+                          <li>
+                            Current period ending:{" "}
+                            {userFriendlyDate(subscriptionCurrentPeriodEnd)}
+                          </li>
+                        </ul>
+                        {planDetails ? (
+                          <BlockStack>
+                            <Text as="p">Plan details:</Text>
+                            <ul>
+                              <li>
+                                {planDetails?.currency === "CAD" ||
+                                planDetails?.currency === "USD"
+                                  ? "$"
+                                  : ""}
+                                {planDetails?.price}
+                                {planDetails?.currency} /{" "}
+                                {planDetails?.frequency}
+                              </li>
+                              <li>{planDetails?.description}</li>
+                            </ul>
+                          </BlockStack>
+                        ) : (
+                          ""
+                        )}
+                        {/* @TODO: add a pop-up "Are you sure" confirmation before cancelling. */}
+                        <Button submit variant="primary" tone="critical">
+                          Cancel Subscription
+                        </Button>
+                      </Form>
                     </BlockStack>
-                  </Form>
-                </BlockStack>
-
-                <BlockStack gap="500">
-                  <BlockStack>
-                    <Text variant="headingXl" as="h4">
-                      {s3CredsTestSuccess === true
-                        ? "✅ Credentials Test Passed!"
-                        : s3CredsTestSuccess === null
-                          ? "⚠️ Test Your S3 Credentials:"
-                          : "❌ Credentials Test Failed: Update your credentials and try again."}
-                    </Text>
-                  </BlockStack>
-
-                  <BlockStack>
-                    <Form method="post">
-                      <input
-                        type="hidden"
-                        name="actionType"
-                        value="s3CredsTest"
-                      />
-
-                      <Button
-                        disabled={
-                          !(
-                            s3AccessKeyIdMasked &&
-                            hasS3SecretAccessKey &&
-                            s3BucketName &&
-                            s3Region
-                          )
-                        }
-                        loading={isLoading}
-                        submit
-                      >
-                        Run Credentials Test
-                      </Button>
-                    </Form>
-                  </BlockStack>
-
-                  <BlockStack>
-                    <Text as="p">
-                      Note: Create{" "}
-                      <a
-                        href="https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "var(--p-color-text-interactive)" }}
-                      >
-                        AWS credentials[↗]
-                      </a>{" "}
-                      with minimal necessary permissions. Grant read, write, and
-                      delete access to your specific S3 bucket only.
-                    </Text>
-                    <Text as="p">Example:</Text>
-                    <pre style={{ background: "#444", color: "#ccc" }}>
-                      <code>
-                        {`
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
-        "Resource": "arn:aws:s3:::your-bucket-name/*"
-      }
-    ]
-  }
-                        `}
-                      </code>
-                    </pre>
-                  </BlockStack>
+                  ) : (
+                    <BlockStack gap="600">
+                      <BlockStack gap="400">
+                        <BlockStack>
+                          <Text variant="headingXl" as="h4">
+                            🧾 Choose a Plan
+                          </Text>
+                        </BlockStack>
+                        <BlockStack>
+                          <Text variant="headingMd" as="h4" tone="critical">
+                            ⚠️ You'll need a plan before you can start using
+                            digiful ⚠️
+                          </Text>
+                        </BlockStack>
+                        <BlockStack gap="800">
+                          {Object.keys(subscriptionPlans).map((planKey) => {
+                            const plan =
+                              subscriptionPlans[
+                                planKey as keyof typeof subscriptionPlans
+                              ];
+                            return (
+                              <BlockStack gap="200" key={planKey}>
+                                <Text variant="headingMd" as="h4">
+                                  📦 {plan.name}
+                                </Text>
+                                <Form method="post">
+                                  <p> {plan.description}</p>
+                                  <p>
+                                    {plan.currency === "CAD" ||
+                                    plan.currency === "USD"
+                                      ? "$"
+                                      : ""}
+                                    {plan.price}
+                                    {plan.currency}/{plan.frequency}
+                                  </p>
+                                  <input
+                                    type="hidden"
+                                    name="actionType"
+                                    value="createSubscription"
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="subscriptionPlan"
+                                    value={planKey}
+                                  />
+                                  <Button submit>Get {plan.name}</Button>
+                                </Form>
+                              </BlockStack>
+                            );
+                          })}
+                        </BlockStack>
+                      </BlockStack>
+                    </BlockStack>
+                  )}
                 </BlockStack>
               </BlockStack>
             </Card>
+
+            {/* Self hosting settings */}
+            {planDetails?.selfHosted ? (
+              <Card>
+                <BlockStack gap="1000">
+                  <BlockStack gap="200">
+                    <InlineStack align="space-between">
+                      <Text variant="headingXl" as="h4">
+                        🪣 AWS Credentials {hasAllAwsCreds}{" "}
+                        {hasAllAwsCreds ? "✅" : "(Required)"}
+                      </Text>
+                      <a href="https://aws.amazon.com/s3/">
+                        <img
+                          src="https://d0.awsstatic.com/logos/powered-by-aws.png"
+                          alt="Powered by AWS Cloud Computing"
+                          style={{ width: "100px" }}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </a>
+                    </InlineStack>
+                    <Form method="post">
+                      <BlockStack gap="200">
+                        <input
+                          type="hidden"
+                          name="actionType"
+                          value="saveS3Settings"
+                        />
+                        <TextField
+                          label="S3 Access Key ID:"
+                          name="s3AccessKeyId"
+                          value={s3AccessKeyId}
+                          placeholder={s3AccessKeyIdMasked}
+                          onChange={setS3AccessKeyId}
+                          autoComplete="off"
+                          disabled={false}
+                        />
+                        <TextField
+                          label="S3 Secret Access Key:"
+                          name="s3SecretAccessKey"
+                          value={s3SecretAccessKey}
+                          onChange={setS3SecretAccessKey}
+                          placeholder={
+                            hasS3SecretAccessKey
+                              ? "****************************************"
+                              : ""
+                          }
+                          autoComplete="off"
+                          disabled={false}
+                          type="password"
+                        />
+                        <TextField
+                          label="S3 Bucket Name:"
+                          name="s3BucketName"
+                          value={s3BucketName}
+                          onChange={setS3BucketName}
+                          autoComplete="off"
+                          disabled={false}
+                        />
+
+                        <TextField
+                          label="S3 Region:"
+                          name="s3Region"
+                          value={s3Region}
+                          onChange={setS3Region}
+                          autoComplete="off"
+                          disabled={false}
+                        />
+
+                        <Button
+                          loading={isLoading}
+                          disabled={
+                            !(
+                              s3AccessKeyId &&
+                              s3SecretAccessKey &&
+                              s3BucketName &&
+                              s3Region
+                            )
+                          }
+                          submit
+                        >
+                          Update
+                        </Button>
+                      </BlockStack>
+                    </Form>
+                  </BlockStack>
+
+                  <BlockStack gap="500">
+                    <BlockStack>
+                      <Text variant="headingXl" as="h4">
+                        {s3CredsTestSuccess === true
+                          ? "✅ Credentials Test Passed!"
+                          : s3CredsTestSuccess === null
+                            ? "⚠️ Test Your S3 Credentials:"
+                            : "❌ Credentials Test Failed: Update your credentials and try again."}
+                      </Text>
+                    </BlockStack>
+
+                    <BlockStack>
+                      <Form method="post">
+                        <input
+                          type="hidden"
+                          name="actionType"
+                          value="s3CredsTest"
+                        />
+
+                        <Button
+                          disabled={!hasAllAwsCreds}
+                          loading={isLoading}
+                          submit
+                        >
+                          Run Credentials Test
+                        </Button>
+                      </Form>
+                    </BlockStack>
+
+                    <BlockStack>
+                      <Text as="p">
+                        Note: Create{" "}
+                        <a
+                          href="https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--p-color-text-interactive)" }}
+                        >
+                          AWS credentials[↗]
+                        </a>{" "}
+                        with minimal necessary permissions. Grant read, write,
+                        and delete access to your specific S3 bucket only.
+                      </Text>
+                      <Text as="p">Example:</Text>
+                      <pre style={{ background: "#444", color: "#ccc" }}>
+                        <code>
+                          {`
+                            {
+                              "Version": "2012-10-17",
+                              "Statement": [
+                                {
+                                  "Effect": "Allow",
+                                  "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+                                  "Resource": "arn:aws:s3:::your-bucket-name/*"
+                                }
+                              ]
+                            }
+                        `}
+                        </code>
+                      </pre>
+                    </BlockStack>
+                  </BlockStack>
+                </BlockStack>
+              </Card>
+            ) : (
+              ""
+            )}
+
             {/* 
           <Card>
             <BlockStack gap="500">
