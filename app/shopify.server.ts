@@ -5,9 +5,19 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
+import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma"; // dev
 import prisma from "./db.server";
 // import { mongoClientPromise } from "./utils/mongoclient";
+import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mongodb"; // prod - needs npm install
+
+// Session storage options differ in this setup for production and development.
+const isProduction = process.env.NODE_ENV === "production";
+const sessionStorageForEnv = isProduction
+  ? new MongoDBSessionStorage(
+      new URL("mongodb://localhost:27017"), // your MongoDB connection string
+      "shopify_app", // database name
+    )
+  : new PrismaSessionStorage(prisma);
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -16,7 +26,7 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: sessionStorageForEnv,
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
