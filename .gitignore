@@ -21,5 +21,4 @@ database.sqlite
 .shopify.lock
 
 # Digiful specific files
-
-/digiful-customer/
+/app/routes/config/subscriptions.ts
