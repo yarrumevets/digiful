@@ -27,6 +27,12 @@ import { decrypt, encrypt } from "app/utils/encrypt";
 import { s3AddProduct, s3AddProductWithAppCreds } from "app/utils/s3";
 import { mongoClientPromise } from "app/utils/mongoclient";
 
+const resJson = (data: any) => {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Get basic merchant data.
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
@@ -48,7 +54,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Verify merchant account exists.
   if (!mongoData) {
     console.error(`No accout found for merchant: ${shopSlug}`);
-    return Response.json({ error: "Account not found!" });
+    // return Response.json({ error: "Account not found!" });
+    return resJson({ error: "Account not found!" });
   }
   // Subscription check
   const response = await admin.graphql(`
@@ -133,7 +140,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     planName,
     hasAllAwsCreds,
   };
-  return Response.json(responseData);
+  // return Response.json(responseData);
+  return resJson({ responseData });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -175,7 +183,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         .map((e: any) => e.node)
         .find((n: any) => n.callbackUrl === webhookOrdersPaidUrl);
       if (sub?.id) {
-        return Response.json({
+        // return Response.json({
+        //   action: "registerWebhook",
+        //   success: true,
+        //   alreadyExisted: true, // @TODO: clean up return object.
+        // });
+        return resJson({
           action: "registerWebhook",
           success: true,
           alreadyExisted: true, // @TODO: clean up return object.
@@ -231,7 +244,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             );
         }
       }
-      return Response.json({ action: "registerWebhook", success: true });
+      // return Response.json({ action: "registerWebhook", success: true });
+      return resJson({ action: "registerWebhook", success: true });
     },
     getAllDigitalProductsFromShop: async () => {
       // Get all products from the Shopify store (not the DB) marked with the digital product tag.
@@ -254,7 +268,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const products = data.data.products.edges.map(
         (e: { node: any }) => e.node,
       );
-      return Response.json(products);
+      // return Response.json(products);
+      return resJson(products);
     },
 
     addNewDigitalProduct: async (formData: FormData) => {
@@ -319,7 +334,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (s3AddProductResult.success !== true) {
         // @TODO: update logic when return value updated. Clean up this logic/err handling
         console.error("Error adding new product to S3 bucket...");
-        return Response.json({
+        // return Response.json({
+        //   action: "addNewDigitalProduct",
+        //   success: false,
+        // });
+        return resJson({
           action: "addNewDigitalProduct",
           success: false,
         });
@@ -487,7 +506,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           updatedAt: now,
         });
       console.log("Insert variant response: ", insertVariantResponse);
-      return Response.json({
+      // return Response.json({
+      //   action: "addNewDigitalProduct",
+      //   success: true,
+      //   shopifyProductId,
+      // });
+      return resJson({
         action: "addNewDigitalProduct",
         success: true,
         shopifyProductId,

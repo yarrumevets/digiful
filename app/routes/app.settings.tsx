@@ -27,6 +27,12 @@ import { s3CredsTest } from "app/utils/s3";
 import { subscriptionPlans, planNameLookup } from "./config/subscriptions";
 import { userFriendlyDate } from "app/utils/utilities";
 
+const resJson = (data: any) => {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
 // Loader
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -152,7 +158,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     subscriptionCurrentPeriodEnd,
   };
 
-  return Response.json(responseData);
+  // return Response.json(responseData);
+  return resJson(responseData);
 };
 
 // --------------------------------- Action ----------------------------------------------
@@ -169,7 +176,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const planKey = formData.get("subscriptionPlan") as string;
       // Validate.
       if (!(planKey in subscriptionPlans)) {
-        return Response.json({
+        // return Response.json({
+        //   success: false,
+        //   action: "createSubscription",
+        //   error: "Plan not found",
+        // });
+        return resJson({
           success: false,
           action: "createSubscription",
           error: "Plan not found",
@@ -202,7 +214,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         `);
       const result = await subscription.json();
-      return Response.json({
+      // return Response.json({
+      //   redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
+      // });
+      return resJson({
         redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
       });
     },
@@ -246,7 +261,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await db
         .collection(MERCHANT_COLLECTION)
         .updateOne(searchFor, { $set: upsertData });
-      return Response.json({ action: "saveS3Settings", success: true });
+      // return Response.json({ action: "saveS3Settings", success: true });
+      return resJson({ action: "saveS3Settings", success: true });
     },
     s3CredsTest: async () => {
       const client = await mongoClientPromise;

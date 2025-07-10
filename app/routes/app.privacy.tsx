@@ -4,9 +4,16 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
 
+const resJson = (data: any) => {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
 // Loader
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  return Response.json({ digitalProductTag: process.env.DIGITAL_PRODUCT_TAG });
+  // return Response.json({ digitalProductTag: process.env.DIGITAL_PRODUCT_TAG });
+  return resJson({ digitalProductTag: process.env.DIGITAL_PRODUCT_TAG });
 };
 
 export default function AdditionalPage() {

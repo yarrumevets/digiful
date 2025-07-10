@@ -11,6 +11,12 @@ import crypto from "crypto";
 import { mongoClientPromise } from "./utils/mongoclient";
 import { authenticate } from "./shopify.server";
 
+const resJson = (data: any) => {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
 // Loader
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
@@ -73,8 +79,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       );
     }
   }
-
-  return Response.json({});
+  // return Response.json({});
+  return resJson({});
 };
 
 export default function App() {
