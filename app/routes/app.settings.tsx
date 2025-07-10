@@ -188,12 +188,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
       const plan = subscriptionPlans[planKey as keyof typeof subscriptionPlans];
-      const returnUrl =
-        process.env.SHOPIFY_APP_URL +
-        "?shop=" +
-        session.shop +
-        "&host=" +
-        Buffer.from(session.shop + "/admin").toString("base64");
+
+      let returnUrl;
+
+      if (process.env.NODE_ENV === "production") {
+        returnUrl = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?host=${host}`;
+      } else {
+        // development.
+        returnUrl =
+          process.env.SHOPIFY_APP_URL +
+          "?shop=" +
+          session.shop +
+          "&host=" +
+          Buffer.from(session.shop + "/admin").toString("base64");
+      }
+
       // @TODO: ! REMOVE test: true from here !
       const subscription = await admin.graphql(`
           mutation {
@@ -214,22 +223,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         `);
       const result = await subscription.json();
-
       // return Response.json({
       //   redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
       // });
-
-      // Redirect merchant after getting a subscription.
-      let redirectUlr;
-      if (process.env.NODE_ENV === "production") {
-        const host = new URL(request.url).searchParams.get("host");
-        redirectUlr = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?host=${host}`;
-      } else {
-        redirectUlr = result.data.appSubscriptionCreate.confirmationUrl;
-      }
-
       return resJson({
-        redirectUlr,
+        redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
       });
     },
     cancelSubscription: async () => {
