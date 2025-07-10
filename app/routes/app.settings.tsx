@@ -56,6 +56,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const subscriptionData = (await response.json()).data;
   const hasActiveSubscription =
     subscriptionData.appInstallation.activeSubscriptions.length > 0;
+
+  console.log(
+    "~~~~ ACTIVE SUBSCRIPTIONS IN SETTINGS: ",
+    subscriptionData.appInstallation.activeSubscriptions,
+  );
+
   let subscriptionStatus,
     planName,
     subscriptionCreatedAt,
