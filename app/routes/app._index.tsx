@@ -73,6 +73,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const subs = data.appInstallation.activeSubscriptions;
   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
+
+  console.log("SUBS: ", subs);
+
+  console.log("SUBS-0: ", subs[0]);
+
   if (!hasActiveSubscription) {
     return { hasActiveSubscription: false };
   }
