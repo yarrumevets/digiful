@@ -214,11 +214,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         `);
       const result = await subscription.json();
+
       // return Response.json({
       //   redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
       // });
+
+      // Redirect merchant after getting a subscription.
+      let redirectUlr;
+      if (process.env.NODE_ENV === "production") {
+        const host = new URL(request.url).searchParams.get("host");
+        redirectUlr = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?host=${host}`;
+      } else {
+        redirectUlr = result.data.appSubscriptionCreate.confirmationUrl;
+      }
+
       return resJson({
-        redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
+        redirectUlr,
       });
     },
     cancelSubscription: async () => {
