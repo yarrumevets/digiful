@@ -3,7 +3,7 @@
 client_id = "814656d35249aa7b69877b65dc03a0a1"
 name = "digiful"
 handle = "digiful"
-application_url = "https://seat-shoulder-though-meetup.trycloudflare.com"
+application_url = "https://behavioral-submitting-outdoors-racing.trycloudflare.com"
 embedded = true
 
 [build]
@@ -28,9 +28,9 @@ scopes = "write_products,read_orders,write_orders,write_products,read_publicatio
 
 [auth]
 redirect_urls = [
-  "https://seat-shoulder-though-meetup.trycloudflare.com/auth/callback",
-  "https://seat-shoulder-though-meetup.trycloudflare.com/auth/shopify/callback",
-  "https://seat-shoulder-though-meetup.trycloudflare.com/api/auth/callback"
+  "https://behavioral-submitting-outdoors-racing.trycloudflare.com/auth/callback",
+  "https://behavioral-submitting-outdoors-racing.trycloudflare.com/auth/shopify/callback",
+  "https://behavioral-submitting-outdoors-racing.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
