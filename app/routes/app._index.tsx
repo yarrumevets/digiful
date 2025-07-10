@@ -26,13 +26,11 @@ import { authenticate } from "../shopify.server";
 import { decrypt, encrypt } from "app/utils/encrypt";
 import { s3AddProduct, s3AddProductWithAppCreds } from "app/utils/s3";
 import { mongoClientPromise } from "app/utils/mongoclient";
-
 const resJson = (data: any) => {
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
   });
 };
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Get basic merchant data.
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
@@ -70,19 +68,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 `);
   const { data } = await response.json();
-
   const subs = data.appInstallation.activeSubscriptions;
   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
-
-  console.log("SUBS: ", subs);
-  console.log("SUBS-0: ", subs[0]);
-
   if (!hasActiveSubscription) {
     return { hasActiveSubscription: false };
   }
   const planName = subs[0].name;
   console.log("===== subs 0 : ", subs[0]);
-
   if (!mongoData.plan) {
     await db.collection(MERCHANT_COLLECTION).updateOne(
       { shopId: shopId },
@@ -95,16 +87,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     );
   }
-
   const hasAllAwsCreds =
     mongoData.s3 &&
     mongoData.s3.s3AccessKeyId &&
     mongoData.s3.hasS3SecretAccessKey &&
     mongoData.s3.s3BucketName &&
     mongoData.s3.s3Region;
-
-  console.log("MongoData: ", mongoData);
-
   // Prepare response data.
   const createdAt =
     mongoData && "createdAt" in mongoData
@@ -144,8 +132,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     planName,
     hasAllAwsCreds,
   };
+
   // return Response.json(responseData);
-  return resJson({ responseData });
+  return resJson(responseData);
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -305,7 +294,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const merchantHasOwnCreds =
         mongoData.s3 && mongoData.plan?.planName === "SelfHosting";
       if (merchantHasOwnCreds) {
-        console.log("===================== SELF HOSTING!!!!!!");
         // Merchant has own creds, so, no need to prefix file name.
         const { s3SecretAccessKey, s3AccessKeyId, s3BucketName, s3Region } =
           mongoData?.s3;
@@ -563,6 +551,12 @@ export default function Index() {
   const [hasAllAwsCreds, setHasAllAwsCreds] = useState<boolean>(false);
   const [canAddNewProduct, setCanAddNewProduct] = useState<boolean>(false);
 
+  const hasActiveSub = loaderData.hasActiveSubscription;
+  useEffect(() => {
+    // @TODO: verify this is needed.
+    setHasActiveSubscription(hasActiveSub);
+  }, [hasActiveSub]);
+
   // Get form data
   useEffect(() => {
     setHasActiveSubscription(loaderData.hasActiveSubscription);
@@ -575,7 +569,6 @@ export default function Index() {
     // setCreatedAt(loaderData.createdAt);
     // setAccountStatus(loaderData.accountStatus);
     setHasAllAwsCreds(loaderData.hasAllAwsCreds);
-
     setCanAddNewProduct(
       (loaderData.planName === "SelfHosting" &&
         loaderData.s3CredsTestSuccess) ||
