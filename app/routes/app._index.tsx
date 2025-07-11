@@ -383,34 +383,86 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
       const addShopifyProductResponseData =
         await addShopifyProductResponse.json();
-      const productId =
-        addShopifyProductResponseData.data.productCreate.product.id;
-      const numericId = productId.split("/").pop();
-      const makeDigitalFetchUrl = `https://${session.shop}/admin/api/2023-10/products/${numericId}.json`;
-      // Create the variant
-      const variantResponse = await fetch(makeDigitalFetchUrl, {
-        method: "PUT",
-        headers: {
-          "X-Shopify-Access-Token": session.accessToken,
-          "Content-Type": "application/json",
-        } as HeadersInit,
-        body: JSON.stringify({
-          product: {
-            id: numericId,
+      // const productId =
+      //   addShopifyProductResponseData.data.productCreate.product.id;
+      // const numericId = productId.split("/").pop();
+      // const makeDigitalFetchUrl = `https://${session.shop}/admin/api/2023-10/products/${numericId}.json`;
+
+      // // Create the variant
+      // const variantResponse = await fetch(makeDigitalFetchUrl, {
+      //   method: "PUT",
+      //   headers: {
+      //     "X-Shopify-Access-Token": session.accessToken,
+      //     "Content-Type": "application/json",
+      //   } as HeadersInit,
+      //   body: JSON.stringify({
+      //     product: {
+      //       id: numericId,
+      //       variants: [
+      //         {
+      //           requires_shipping: false,
+      //           inventory_management: null,
+      //           price,
+      //         },
+      //       ],
+      //     },
+      //   }),
+      // });
+
+      // const variantResponseData = await variantResponse.json();
+      // const variant = variantResponseData.product.variants[0];
+      // Parse the response
+      const responseData = await publicationsResponse.json();
+
+      // 1) Bulk create variant (price only)
+      const bulkRes = await admin.graphql(
+        `mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+     productVariantsBulkCreate(productId: $productId, variants: $variants) {
+       productVariants { id inventoryItem { id } price compareAtPrice taxable sku barcode }
+       userErrors { field message }
+     }
+   }`,
+        {
+          variables: {
+            productId:
+              addShopifyProductResponseData.data.productCreate.product.id,
             variants: [
               {
-                requires_shipping: false,
-                inventory_management: null,
-                price,
+                price: price?.toString(),
+                optionValues: [{ optionName: "Title", name: title }],
               },
             ],
           },
-        }),
-      });
-      const variantResponseData = await variantResponse.json();
-      const variant = variantResponseData.product.variants[0];
-      // Parse the response
-      const responseData = await publicationsResponse.json();
+        },
+      );
+      const bulkData = (await bulkRes.json()).data.productVariantsBulkCreate;
+      if (bulkData.userErrors.length)
+        throw new Error(
+          bulkData.userErrors.map((e: { message: any }) => e.message).join(),
+        );
+      const variant = bulkData.productVariants[0];
+
+      // 2) Update shipping & inventory on the inventory item
+      const updateRes = await admin.graphql(
+        `mutation inventoryItemUpdate($id: ID!, $input: InventoryItemInput!) {
+     inventoryItemUpdate(id: $id, input: $input) {
+       inventoryItem { id tracked requiresShipping }
+       userErrors { field message }
+     }
+   }`,
+        {
+          variables: {
+            id: variant.inventoryItem.id,
+            input: { tracked: false, requiresShipping: false },
+          },
+        },
+      );
+      const updateData = (await updateRes.json()).data.inventoryItemUpdate;
+      if (updateData.userErrors.length)
+        throw new Error(
+          updateData.userErrors.map((e: { message: any }) => e.message).join(),
+        );
+      // const finalVariant = variant;
 
       // Find the Online Store publication
       const onlineStorePublication = responseData.data.publications.edges.find(

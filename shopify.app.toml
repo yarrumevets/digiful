@@ -3,35 +3,35 @@
 client_id = "814656d35249aa7b69877b65dc03a0a1"
 name = "digiful"
 handle = "digiful"
-application_url = "https://behavioral-submitting-outdoors-racing.trycloudflare.com"
+application_url = "https://bars-organized-expenditures-hockey.trycloudflare.com"
 embedded = true
 
 [build]
-include_config_on_deploy = true
-dev_store_url = "quickstart-d30a541f.myshopify.com"
 automatically_update_urls_on_dev = true
+dev_store_url = "quickstart-d30a541f.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,read_orders,write_orders,write_products,read_publications,write_publications,write_inventory"
+
+[auth]
+redirect_urls = [
+  "https://bars-organized-expenditures-hockey.trycloudflare.com/auth/callback",
+  "https://bars-organized-expenditures-hockey.trycloudflare.com/auth/shopify/callback",
+  "https://bars-organized-expenditures-hockey.trycloudflare.com/api/auth/callback"
+]
 
 [webhooks]
 api_version = "2025-04"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/scopes_update" ]
+  uri = "https://parameter-decisions-ventures-ppc.trycloudflare.com/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/scopes_update" ]
-  uri = "/webhooks/app/scopes_update"
-
-[access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,read_orders,write_orders,write_products,read_publications,write_publications"
-
-[auth]
-redirect_urls = [
-  "https://behavioral-submitting-outdoors-racing.trycloudflare.com/auth/callback",
-  "https://behavioral-submitting-outdoors-racing.trycloudflare.com/auth/shopify/callback",
-  "https://behavioral-submitting-outdoors-racing.trycloudflare.com/api/auth/callback"
-]
+  topics = [ "app/uninstalled" ]
+  uri = "https://parameter-decisions-ventures-ppc.trycloudflare.com/webhooks/app/uninstalled"
 
 [pos]
 embedded = false
