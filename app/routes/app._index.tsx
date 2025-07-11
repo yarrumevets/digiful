@@ -478,6 +478,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           sku: variant.sku,
           file: {
             name: fileName, // either with prefix hash (hosted) or not (self hosted)
+            originalName: fileObject.name,
             type: fileObject.type,
             size: fileObject.size,
             ETag: ETag,
@@ -486,7 +487,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             // @TODO: use this for update flow when adding updated files.
             {
               file: {
-                name: fileObject.name,
+                name: fileName,
+                originalName: fileObject.name,
                 type: fileObject.type,
                 size: fileObject.size,
                 ETag: ETag,
