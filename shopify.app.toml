@@ -25,13 +25,13 @@ redirect_urls = [
 [webhooks]
 api_version = "2025-04"
 
-  [[webhooks.subscriptions]]
-  topics = [ "app/scopes_update" ]
-  uri = "https://parameter-decisions-ventures-ppc.trycloudflare.com/webhooks/app/scopes_update"
+#  [[webhooks.subscriptions]]
+#  topics = [ "app/scopes_update" ]
+#  uri = "https://parameter-decisions-ventures-ppc.trycloudflare.com/webhooks/app/scopes_update"
 
-  [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "https://parameter-decisions-ventures-ppc.trycloudflare.com/webhooks/app/uninstalled"
+#  [[webhooks.subscriptions]]
+#  topics = [ "app/uninstalled" ]
+#  uri = "https://parameter-decisions-ventures-ppc.trycloudflare.com/webhooks/app/uninstalled"
 
 [pos]
 embedded = false
