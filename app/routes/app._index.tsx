@@ -846,7 +846,7 @@ export default function Index() {
                       {!!newProdId && !!newProdUrl ? (
                         <BlockStack>
                           <Text as="h3" variant="headingMd">
-                            New File Created!
+                            Your new product has been added!
                           </Text>
                           <Text as="p">
                             Your new product has been added. Go to the{" "}
