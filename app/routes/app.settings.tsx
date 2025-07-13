@@ -187,6 +187,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         //   action: "createSubscription",
         //   error: "Plan not found",
         // });
+
+        console.error("Plan key not found: ", planKey);
+
         return resJson({
           success: false,
           action: "createSubscription",
@@ -199,7 +202,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       if (process.env.NODE_ENV === "production") {
         const host = new URL(request.url).searchParams.get("host");
-        returnUrl = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?host=${host}`;
+        // returnUrl = `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?host=${host}`;
+        // returnUrl = `${process.env.SHOPIFY_APP_URL}?shop=${session.shop}&host=${host}`;
+
+        returnUrl = `https://admin.shopify.com/store/${session.shop.replace(".myshopify.com", "")}/apps/digiful/app`;
         console.log("----- RETURN URL: ", returnUrl);
       } else {
         // development.
