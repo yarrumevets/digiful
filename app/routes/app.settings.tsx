@@ -232,12 +232,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               }]
             ) {
               confirmationUrl
+              userErrors {
+                field
+                message
+              }
             }
           }
         `);
       const result = await subscription.json();
 
       console.log("GraphQL subscription result:", result);
+
+      if (result.data?.appSubscriptionCreate?.userErrors?.length > 0) {
+        console.error(
+          "GraphQL errors:",
+          result.data.appSubscriptionCreate.userErrors,
+        );
+      }
+
       // return Response.json({
       //   redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
       // });
