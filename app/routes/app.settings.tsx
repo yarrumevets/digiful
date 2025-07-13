@@ -236,6 +236,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         `);
       const result = await subscription.json();
+
+      console.log("GraphQL subscription result:", result);
       // return Response.json({
       //   redirectUrl: result.data.appSubscriptionCreate.confirmationUrl,
       // });
