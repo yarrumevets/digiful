@@ -971,8 +971,12 @@ export default function Index() {
                   </Text>{" "}
                   <List>
                     <List.Item>
-                      <Link url="https://digiful.link" removeUnderline>
-                        digiful.link
+                      <Link
+                        url="https://digiful.click"
+                        removeUnderline
+                        target="_blank"
+                      >
+                        digiful.click
                       </Link>
                     </List.Item>
                   </List>
