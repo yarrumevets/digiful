@@ -93,6 +93,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     mongoData.s3.hasS3SecretAccessKey &&
     mongoData.s3.s3BucketName &&
     mongoData.s3.s3Region;
+
+  console.log(
+    "M O N G O D A T A : ",
+    mongoData.s3,
+    " --- ",
+    mongoData.s3.s3AccessKeyId,
+    " --- ",
+    mongoData.s3.hasS3SecretAccessKey,
+    " --- ",
+    mongoData.s3.s3BucketName,
+    " --- ",
+    mongoData.s3.s3Region,
+  );
+
   // Prepare response data.
   const createdAt =
     mongoData && "createdAt" in mongoData
