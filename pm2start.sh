@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# Before first commit, this applies permissions that persist in git:
+# Before first commit:
 # git update-index --chmod=+x yourscript.sh
 
-# In order to run with pm2 and env vars you need:
+# Before first running:
 # npm install -g dotenv-cli
 
-# Copy and run this PM2 command:
+# Run this with:
 # pm2 start ./pm2start.sh --name digiful
-
 dotenv npm run start
