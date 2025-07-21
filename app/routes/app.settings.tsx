@@ -281,6 +281,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         {
           $unset: {
             plan: 1,
+            s3: 1,
           },
         },
       );
