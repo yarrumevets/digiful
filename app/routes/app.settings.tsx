@@ -272,6 +272,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       `);
       const cancelSubResData = await cancelSubRes.json();
       console.log("RES 2 DATA: ", cancelSubResData); // @TODO: log and save in merchant DB.
+
+      // Remove the plan from db.
+      const client = await mongoClientPromise;
+      const db = client.db(DB_NAME);
+      await db.collection(MERCHANT_COLLECTION).updateOne(
+        { shopId: shopId },
+        {
+          $unset: {
+            plan: 1,
+          },
+        },
+      );
+
       return null;
     },
     saveS3Settings: async (formData: FormData) => {
