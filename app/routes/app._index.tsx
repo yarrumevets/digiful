@@ -73,6 +73,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (!hasActiveSubscription) {
     return { hasActiveSubscription: false };
   }
+
+  // Has an active subscription at this point.
+
   const planName = subs[0].name;
   console.log("===== subs 0 : ", subs[0]);
   if (!mongoData.plan) {
