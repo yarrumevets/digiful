@@ -27,11 +27,20 @@ import { s3CredsTest } from "app/utils/s3";
 import { subscriptionPlans, planNameLookup } from "./config/subscriptions";
 import { userFriendlyDate } from "app/utils/utilities";
 
+// // Handle errors with reload message.
+// import { ErrorFallback } from "app/utils/errormsg";
+// export function ErrorBoundary() {
+//   return <ErrorFallback />;
+// }
+
+// @TODO: create a util function for this.
 const resJson = (data: any) => {
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
   });
 };
+
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 // Loader
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -216,11 +225,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           Buffer.from(session.shop + "/admin").toString("base64");
       }
 
+      const isTest = !IS_PRODUCTION;
       // @TODO: ! REMOVE test: true from here !
       const subscription = await admin.graphql(`
           mutation {
             appSubscriptionCreate(
-              test: true
+              test: ${isTest}
               name: "${plan.name}"
               returnUrl: "${returnUrl}"
               lineItems: [{
@@ -453,11 +463,16 @@ export default function SettingsPage() {
           <BlockStack gap="600">
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Image source="/images/logos/digiful-logo-64.png" alt="Logo" />
-              <Text variant="headingXl" as="h4">
-                digiful | settings
-              </Text>
+              {IS_PRODUCTION ? (
+                <Text variant="headingXl" as="h4">
+                  digiful | settings
+                </Text>
+              ) : (
+                <Text variant="headingXl" as="h4">
+                  digiful | settings &#9888; DEVELOPMENT MODE &#9888;
+                </Text>
+              )}
             </div>
-
             <Card>
               <BlockStack gap="1000">
                 <BlockStack gap="400">

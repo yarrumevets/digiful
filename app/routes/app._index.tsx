@@ -26,11 +26,19 @@ import { authenticate } from "../shopify.server";
 import { decrypt, encrypt } from "app/utils/encrypt";
 import { s3AddProduct, s3AddProductWithAppCreds } from "app/utils/s3";
 import { mongoClientPromise } from "app/utils/mongoclient";
+
+// // Handle errors with reload message.
+// import { ErrorFallback } from "app/utils/errormsg";
+// export function ErrorBoundary() {
+//   return <ErrorFallback />;
+// }
+
 const resJson = (data: any) => {
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
   });
 };
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Get basic merchant data.
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
