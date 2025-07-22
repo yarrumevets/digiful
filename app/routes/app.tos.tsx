@@ -1,6 +1,12 @@
 import { Card, Layout, Page, Text, BlockStack } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
+// Handle errors with reload message.
+import { ErrorFallback } from "app/utils/errormsg";
+export function ErrorBoundary() {
+  return <ErrorFallback />;
+}
+
 export default function AdditionalPage() {
   return (
     <Page>

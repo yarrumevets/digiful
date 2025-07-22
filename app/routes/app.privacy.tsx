@@ -4,6 +4,12 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
 
+// Handle errors with reload message.
+import { ErrorFallback } from "app/utils/errormsg";
+export function ErrorBoundary() {
+  return <ErrorFallback />;
+}
+
 const resJson = (data: any) => {
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
