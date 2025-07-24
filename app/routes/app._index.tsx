@@ -647,7 +647,7 @@ export default function Index() {
         (loaderData.planName && loaderData.planName !== "SelfHosting"),
     );
 
-    console.log("VM ID: ", loaderData.vmId);
+    console.log("VM ID: ", loaderData.vmId, " --- loaderData: ", loaderData);
   }, [loaderData]);
 
   // New product form
