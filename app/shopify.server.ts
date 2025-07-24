@@ -14,7 +14,7 @@ import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mong
 const isProduction = process.env.NODE_ENV === "production";
 const sessionStorageForEnv = isProduction
   ? new MongoDBSessionStorage(
-      new URL("mongodb://localhost:27017"), // your MongoDB connection string
+      new URL("" + process.env.MONGODB_URL), // your MongoDB connection string
       "shopify_app", // database name
     )
   : new PrismaSessionStorage(prisma);

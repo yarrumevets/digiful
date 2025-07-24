@@ -3,9 +3,7 @@ import { MongoClient } from "mongodb";
 let client: MongoClient | undefined;
 let mongoClientPromise: Promise<MongoClient>;
 
-const uri = "mongodb://localhost:27017";
-
-client = new MongoClient(uri);
+client = new MongoClient("" + process.env.MONGODB_URL);
 mongoClientPromise = client.connect();
 
 export { mongoClientPromise };
