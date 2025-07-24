@@ -132,7 +132,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     hasActiveSubscription: boolean;
     planName: string;
     hasAllAwsCreds: boolean;
-    serverInstanceId: string;
+    vmId: string;
   } = {
     shopName,
     shopDomain,
@@ -146,7 +146,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     hasActiveSubscription,
     planName,
     hasAllAwsCreds,
-    serverInstanceId: "" + process.env.SERVER_INSTANCE_ID,
+    vmId: "" + process.env.VM_ID,
   };
 
   // return Response.json(responseData);
@@ -645,7 +645,7 @@ export default function Index() {
         (loaderData.planName && loaderData.planName !== "SelfHosting"),
     );
 
-    console.log("Server Instance ID: ", loaderData.serverInstanceId);
+    console.log("VM ID: ", loaderData.vmId);
   }, [loaderData]);
 
   // New product form
