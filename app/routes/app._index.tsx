@@ -40,6 +40,8 @@ const resJson = (data: any) => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  console.log("<><><><><> VM_ID loaded:", process.env.VM_ID);
+
   // Get basic merchant data.
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
   const DIGITAL_PRODUCT_TAG = "" + process.env.DIGITAL_PRODUCT_TAG;
