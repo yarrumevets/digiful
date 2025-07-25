@@ -30,19 +30,6 @@ export const registerWebhook = async (
   // Check for existing webhook
 
   // @TODO: add try-catch
-  //   const listResp = await admin.graphql(
-  //     `query {
-  //             webhookSubscriptions(topics: [${JSON.stringify(topic)}], first: 10) # <--- need variable for APP_SUBSCRIPTIONS_UPDATE
-  //             {
-  //               edges {
-  //                 node {
-  //                   id
-  //                   callbackUrl
-  //                 }
-  //               }
-  //             }
-  //           }`,
-  //   );
 
   // Get ALL webhooks and then manually filter, as some (APP_SUBSCRIPTIONS_UPDATE) don't work while others (ORDERS_PAID) do.
   const listResp = await admin.graphql(`

@@ -38,7 +38,8 @@ import { registerWebhook } from "app/utils/registerwebhook";
 // }
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  console.log("<><><><><> VM_ID loaded:", process.env.VM_ID);
+  const vmId = "" + process.env.VM_ID;
+  console.log("<><><><><> VM_ID loaded:", vmId);
   // Get basic merchant data.
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
   const DIGITAL_PRODUCT_TAG = "" + process.env.DIGITAL_PRODUCT_TAG;
@@ -60,7 +61,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (!mongoData) {
     console.error(`No accout found for merchant: ${shopSlug}`);
     // return Response.json({ error: "Account not found!" });
-    return resJson({ error: "Account not found!" });
+    return resJson({ error: "Account not found!", vmId });
   }
   // Subscription check
   const response = await admin.graphql(`
@@ -80,7 +81,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   console.log("!!!!!!!!!!!!!!!!!!! subs: ", subs);
 
   if (!hasActiveSubscription) {
-    return { hasActiveSubscription: false };
+    return { hasActiveSubscription: false, vmId };
   }
 
   // Has an active subscription at this point.
@@ -146,7 +147,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     hasActiveSubscription,
     planName,
     hasAllAwsCreds,
-    vmId: "" + process.env.VM_ID,
+    vmId,
   };
 
   // return Response.json(responseData);
