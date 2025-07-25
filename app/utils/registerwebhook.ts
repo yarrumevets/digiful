@@ -5,8 +5,6 @@ import { mongoClientPromise } from "./mongoclient";
 import { resJson } from "./utilities";
 import { encrypt } from "app/utils/encrypt";
 
-const client = await mongoClientPromise;
-const db = client.db(process.env.DB_NAME);
 const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
 
 export const registerWebhook = async (
@@ -17,6 +15,9 @@ export const registerWebhook = async (
   mongoSubsObjectName: string, // name of the object to store subs info in merchant.
   topic: string, // APP_SUBSCRIPTIONS_UPDATE
 ) => {
+  const client = await mongoClientPromise;
+  const db = client.db(process.env.DB_NAME);
+
   // Example data that is passed in:
   const webhookUrl = "" + process.env.WEBHOOK_URL + webhookRoute;
 
