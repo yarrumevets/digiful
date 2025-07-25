@@ -281,7 +281,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
       `);
       const cancelSubResData = await cancelSubRes.json();
-      console.log("RES 2 DATA: ", cancelSubResData); // @TODO: log and save in merchant DB.
+      console.log("<><> RES 2 DATA: ", cancelSubResData); // @TODO: log and save in merchant DB.
 
       // Remove the plan from db.
       const client = await mongoClientPromise;
@@ -295,6 +295,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           },
         },
       );
+
+      console.log("<><> removed plan data...");
 
       return null;
     },
