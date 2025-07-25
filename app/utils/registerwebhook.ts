@@ -30,23 +30,38 @@ export const registerWebhook = async (
   // Check for existing webhook
 
   // @TODO: add try-catch
-  const listResp = await admin.graphql(
-    `query {
-            webhookSubscriptions(topics: [${JSON.stringify(topic)}], first: 10) # <--- need variable for APP_SUBSCRIPTIONS_UPDATE
-            {
-              edges {
-                node {
-                  id
-                  callbackUrl
-                }
-              }
-            }
-          }`,
-  );
-  const listData = await listResp.json(); // add error handling. json will throw if shopify api errors with non-200.
+  //   const listResp = await admin.graphql(
+  //     `query {
+  //             webhookSubscriptions(topics: [${JSON.stringify(topic)}], first: 10) # <--- need variable for APP_SUBSCRIPTIONS_UPDATE
+  //             {
+  //               edges {
+  //                 node {
+  //                   id
+  //                   callbackUrl
+  //                 }
+  //               }
+  //             }
+  //           }`,
+  //   );
+
+  // Get ALL webhooks and then manually filter, as some (APP_SUBSCRIPTIONS_UPDATE) don't work while others (ORDERS_PAID) do.
+  const listResp = await admin.graphql(`
+  query {
+    webhookSubscriptions(first: 100) {
+      edges {
+        node {
+          id
+          topic
+          callbackUrl
+        }
+      }
+    }
+  }
+`);
+  const listData = await listResp.json();
   const sub = listData.data.webhookSubscriptions.edges
     .map((e: any) => e.node)
-    .find((n: any) => n.callbackUrl === webhookUrl);
+    .find((n: any) => n.callbackUrl === webhookUrl && n.topic === topic);
   if (sub?.id) {
     return resJson({
       success: true,
