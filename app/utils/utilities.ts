@@ -5,4 +5,10 @@ const userFriendlyDate = (date: string) =>
     day: "numeric",
   });
 
-export { userFriendlyDate };
+const resJson = (data: any) => {
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
+export { userFriendlyDate, resJson };
