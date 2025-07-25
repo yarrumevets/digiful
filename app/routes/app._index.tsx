@@ -23,9 +23,13 @@ import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 
 // Import Custom Code
 import { authenticate } from "../shopify.server";
-import { decrypt, encrypt } from "app/utils/encrypt";
+import { decrypt } from "app/utils/encrypt";
 import { s3AddProduct, s3AddProductWithAppCreds } from "app/utils/s3";
 import { mongoClientPromise } from "app/utils/mongoclient";
+
+import { resJson } from "app/utils/utilities";
+
+import { registerWebhook } from "app/utils/registerwebhook";
 
 // // Handle errors with reload message.
 // import { ErrorFallback } from "app/utils/errormsg";
@@ -33,15 +37,8 @@ import { mongoClientPromise } from "app/utils/mongoclient";
 //   return <ErrorFallback />;
 // }
 
-const resJson = (data: any) => {
-  return new Response(JSON.stringify(data), {
-    headers: { "Content-Type": "application/json" },
-  });
-};
-
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   console.log("<><><><><> VM_ID loaded:", process.env.VM_ID);
-
   // Get basic merchant data.
   const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
   const DIGITAL_PRODUCT_TAG = "" + process.env.DIGITAL_PRODUCT_TAG;
@@ -65,54 +62,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // return Response.json({ error: "Account not found!" });
     return resJson({ error: "Account not found!" });
   }
-
-  //   // Subscription check
-  //   const response = await admin.graphql(`
-  //     query {
-  //       appInstallation {
-  //         activeSubscriptions {
-  //           id
-  //           status
-  //           name
-  //         }
-  //       }
-  //     }
-  // `);
-  //   const { data } = await response.json();
-  //   const subs = data.appInstallation.activeSubscriptions;
-  //   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
-  //   console.log("!!!!!!!!!!!!!!!!!!! subs: ", subs);
-
-  // Broader subscription check. @TODO: remove previous check if this is sufficient.
+  // Subscription check
   const response = await admin.graphql(`
-  query {
-    appSubscriptions(first: 1, sortKey: CREATED_AT, reverse: true, status: ACTIVE) {
-      edges {
-        node {
+    query {
+      appInstallation {
+        activeSubscriptions {
           id
           status
           name
         }
       }
     }
-  }
 `);
   const { data } = await response.json();
-  const subs = data.appSubscriptions.edges.map((edge) => edge.node);
+  const subs = data.appInstallation.activeSubscriptions;
   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
-  console.log(
-    "<> <> <> !!!!!!!!!!!!!!!!!!! subs: ",
-    subs,
-    " ----- subs[0]: ",
-    subs[0],
-  );
+  console.log("!!!!!!!!!!!!!!!!!!! subs: ", subs);
 
   if (!hasActiveSubscription) {
     return { hasActiveSubscription: false };
   }
 
   // Has an active subscription at this point.
-
   const planName = subs[0].name;
   console.log("===== subs 0 : ", subs[0]);
   if (!mongoData.plan) {
@@ -196,95 +167,111 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const client = await mongoClientPromise;
   const db = client.db(DB_NAME);
   const actions = {
-    registerWebhook: async () => {
-      const webhookOrdersPaidUrl =
-        "" + process.env.WEBHOOK_URL + process.env.ORDERS_PAID_ROUTE;
-      const mongoData = await db
-        .collection(MERCHANT_COLLECTION)
-        .findOne({ shopId });
-      // Check for existing webhook
-      const listResp = await admin.graphql(
-        `query {
-          webhookSubscriptions(topics: [ORDERS_PAID], first: 10)
-          {
-            edges {
-              node {
-                id
-                callbackUrl
-              }
-            }
-          }
-        }`,
+    // registerOrdersPaidWebhook: async () => {
+    //   const webhookUrl =
+    //     "" + process.env.WEBHOOK_URL + process.env.ORDERS_PAID_ROUTE;
+    //   const mongoData = await db
+    //     .collection(MERCHANT_COLLECTION)
+    //     .findOne({ shopId });
+    //   // Check for existing webhook
+    //   const listResp = await admin.graphql(
+    //     `query {
+    //       webhookSubscriptions(topics: [ORDERS_PAID], first: 10)
+    //       {
+    //         edges {
+    //           node {
+    //             id
+    //             callbackUrl
+    //           }
+    //         }
+    //       }
+    //     }`,
+    //   );
+    //   const listData = await listResp.json();
+    //   const sub = listData.data.webhookSubscriptions.edges
+    //     .map((e: any) => e.node)
+    //     .find((n: any) => n.callbackUrl === webhookUrl);
+    //   if (sub?.id) {
+    //     return resJson({
+    //       action: "registerOrdersPaidWebhook",
+    //       success: true,
+    //       alreadyExisted: true, // @TODO: clean up return object.
+    //     });
+    //   }
+    //   console.log("REGISTER NEW WEBHOOK.......");
+    //   // @TODO: What if !mongoData and !session.accessToken ?
+    //   if (!mongoData?.webhookOrdersPaid?.id && session.accessToken) {
+    //     const gqlResp = await admin.graphql(
+    //       `mutation {
+    //         webhookSubscriptionCreate(topic: ORDERS_PAID, webhookSubscription: {
+    //           callbackUrl: "${webhookUrl}",
+    //           format: JSON
+    //         }) {
+    //           webhookSubscription {
+    //             id
+    //             topic
+    //             createdAt
+    //           }
+    //           userErrors {
+    //             field
+    //             message
+    //           }
+    //         }
+    //       }`,
+    //     );
+    //     const { data } = await gqlResp.json();
+    //     if (data.webhookSubscriptionCreate.userErrors?.length) {
+    //       console.error(
+    //         "\u26A0\uFE0F  Webhook registration user errors: ",
+    //         data.webhookSubscriptionCreate.userErrors,
+    //       );
+    //       await db.collection(MERCHANT_COLLECTION).updateOne(
+    //         { shopId },
+    //         {
+    //           $set: {
+    //             "webhooks.webhookOrdersPaid": {
+    //               errors: data.webhookSubscriptionCreate.userErrors,
+    //             },
+    //           },
+    //         },
+    //       );
+    //     } else {
+    //       const webhookData =
+    //         data.webhookSubscriptionCreate.webhookSubscription;
+    //       webhookData.accessToken = encrypt(session.accessToken);
+    //       await db
+    //         .collection(MERCHANT_COLLECTION)
+    //         .updateOne(
+    //           { shopId },
+    //           { $set: { "webhooks.webhookOrdersPaid": webhookData } },
+    //         );
+    //     }
+    //   }
+    //   return resJson({ action: "registerOrdersPaidWebhook", success: true });
+    // },
+
+    registerOrdersPaidWebhook: async () => {
+      return registerWebhook(
+        shopId,
+        admin,
+        session,
+        "" + process.env.ORDERS_PAID_ROUTE,
+        "webhooks.webhookOrdersPaid",
+        "ORDERS_PAID",
       );
-      const listData = await listResp.json();
-      const sub = listData.data.webhookSubscriptions.edges
-        .map((e: any) => e.node)
-        .find((n: any) => n.callbackUrl === webhookOrdersPaidUrl);
-      if (sub?.id) {
-        // return Response.json({
-        //   action: "registerWebhook",
-        //   success: true,
-        //   alreadyExisted: true, // @TODO: clean up return object.
-        // });
-        return resJson({
-          action: "registerWebhook",
-          success: true,
-          alreadyExisted: true, // @TODO: clean up return object.
-        });
-      }
-      console.log("REGISTER NEW WEBHOOK.......");
-      // @TODO: What if !mongoData and !session.accessToken ?
-      if (!mongoData?.webhookOrdersPaid?.id && session.accessToken) {
-        // const webhookSecret = randomBytes(32).toString("hex");
-        const gqlResp = await admin.graphql(
-          `mutation {
-            webhookSubscriptionCreate(topic: ORDERS_PAID, webhookSubscription: {
-              callbackUrl: "${webhookOrdersPaidUrl}",
-              format: JSON
-            }) {
-              webhookSubscription { 
-                id
-                topic
-                createdAt
-              }
-              userErrors { 
-                field 
-                message 
-              }
-            }
-          }`,
-        );
-        const { data } = await gqlResp.json();
-        if (data.webhookSubscriptionCreate.userErrors?.length) {
-          console.error(
-            "\u26A0\uFE0F  Webhook registration user errors: ",
-            data.webhookSubscriptionCreate.userErrors,
-          );
-          await db.collection(MERCHANT_COLLECTION).updateOne(
-            { shopId },
-            {
-              $set: {
-                "webhooks.webhookOrdersPaid": {
-                  errors: data.webhookSubscriptionCreate.userErrors,
-                },
-              },
-            },
-          );
-        } else {
-          const webhookData =
-            data.webhookSubscriptionCreate.webhookSubscription;
-          webhookData.accessToken = encrypt(session.accessToken);
-          await db
-            .collection(MERCHANT_COLLECTION)
-            .updateOne(
-              { shopId },
-              { $set: { "webhooks.webhookOrdersPaid": webhookData } },
-            );
-        }
-      }
-      // return Response.json({ action: "registerWebhook", success: true });
-      return resJson({ action: "registerWebhook", success: true });
     },
+
+    registerAppSubscriptionUpdateWebhook: async () => {
+      return registerWebhook(
+        shopId,
+        admin,
+        session,
+        "" + process.env.APP_SUBSCRIPTIONS_UPDATE_ROUTE,
+        "webhooks.webhookAppSubscriptionsUpdate", // mongo
+        "APP_SUBSCRIPTIONS_UPDATE", // graphql enum
+      );
+    },
+
     getAllDigitalProductsFromShop: async () => {
       // Get all products from the Shopify store (not the DB) marked with the digital product tag.
       // @TODO: Add pagination. Currently limited to 250 products.
@@ -428,45 +415,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
       const addShopifyProductResponseData =
         await addShopifyProductResponse.json();
-      // const productId =
-      //   addShopifyProductResponseData.data.productCreate.product.id;
-      // const numericId = productId.split("/").pop();
-      // const makeDigitalFetchUrl = `https://${session.shop}/admin/api/2023-10/products/${numericId}.json`;
-
-      // // Create the variant
-      // const variantResponse = await fetch(makeDigitalFetchUrl, {
-      //   method: "PUT",
-      //   headers: {
-      //     "X-Shopify-Access-Token": session.accessToken,
-      //     "Content-Type": "application/json",
-      //   } as HeadersInit,
-      //   body: JSON.stringify({
-      //     product: {
-      //       id: numericId,
-      //       variants: [
-      //         {
-      //           requires_shipping: false,
-      //           inventory_management: null,
-      //           price,
-      //         },
-      //       ],
-      //     },
-      //   }),
-      // });
-
-      // const variantResponseData = await variantResponse.json();
-      // const variant = variantResponseData.product.variants[0];
       // Parse the response
       const responseData = await publicationsResponse.json();
-
       // 1) Bulk create variant (price only)
       const bulkRes = await admin.graphql(
         `mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-     productVariantsBulkCreate(productId: $productId, variants: $variants) {
-       productVariants { id inventoryItem { id } price compareAtPrice taxable sku barcode }
-       userErrors { field message }
-     }
-   }`,
+          productVariantsBulkCreate(productId: $productId, variants: $variants) {
+            productVariants { id inventoryItem { id } price compareAtPrice taxable sku barcode }
+            userErrors { field message }
+          }
+        }`,
         {
           variables: {
             productId:
@@ -624,10 +582,20 @@ export default function Index() {
   const actionData = useActionData<typeof action>();
   const loaderData = useLoaderData<typeof loader>();
 
-  // Register/verify the webhook.
+  // Register/verify the orders_paid webhook.
   useEffect(() => {
     const fd = new FormData();
-    fd.append("actionType", "registerWebhook");
+    fd.append("actionType", "registerOrdersPaidWebhook");
+    fetcher.submit(fd, {
+      method: "post",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Register/verify the app_subscription_update webhook.
+  useEffect(() => {
+    const fd = new FormData();
+    fd.append("actionType", "registerAppSubscriptionUpdateWebhook");
     fetcher.submit(fd, {
       method: "post",
     });
