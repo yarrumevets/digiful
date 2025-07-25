@@ -65,21 +65,48 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // return Response.json({ error: "Account not found!" });
     return resJson({ error: "Account not found!" });
   }
-  // Subscription check
+
+  //   // Subscription check
+  //   const response = await admin.graphql(`
+  //     query {
+  //       appInstallation {
+  //         activeSubscriptions {
+  //           id
+  //           status
+  //           name
+  //         }
+  //       }
+  //     }
+  // `);
+  //   const { data } = await response.json();
+  //   const subs = data.appInstallation.activeSubscriptions;
+  //   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
+  //   console.log("!!!!!!!!!!!!!!!!!!! subs: ", subs);
+
+  // Broader subscription check. @TODO: remove previous check if this is sufficient.
   const response = await admin.graphql(`
-    query {
-      appInstallation {
-        activeSubscriptions {
+  query {
+    appSubscriptions(first: 1, sortKey: CREATED_AT, reverse: true, status: ACTIVE) {
+      edges {
+        node {
           id
           status
           name
         }
       }
     }
+  }
 `);
   const { data } = await response.json();
-  const subs = data.appInstallation.activeSubscriptions;
+  const subs = data.appSubscriptions.edges.map((edge) => edge.node);
   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
+  console.log(
+    "<> <> <> !!!!!!!!!!!!!!!!!!! subs: ",
+    subs,
+    " ----- subs[0]: ",
+    subs[0],
+  );
+
   if (!hasActiveSubscription) {
     return { hasActiveSubscription: false };
   }
