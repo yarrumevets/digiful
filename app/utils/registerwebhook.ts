@@ -7,6 +7,9 @@ import { encrypt } from "app/utils/encrypt";
 
 const MERCHANT_COLLECTION = "" + process.env.MERCHANT_COLLECTION;
 
+// @TODO: - fix: api silently logs failure but does not retry
+// - error handling - ex: json will throw if non-200 returned from shopify
+
 export const registerWebhook = async (
   shopId: string,
   admin: AdminApiContextWithRest<ShopifyRestResources>,
@@ -25,6 +28,8 @@ export const registerWebhook = async (
     .collection(MERCHANT_COLLECTION)
     .findOne({ shopId });
   // Check for existing webhook
+
+  // @TODO: add try-catch
   const listResp = await admin.graphql(
     `query {
             webhookSubscriptions(topics: [${JSON.stringify(topic)}], first: 10) # <--- need variable for APP_SUBSCRIPTIONS_UPDATE
@@ -38,7 +43,7 @@ export const registerWebhook = async (
             }
           }`,
   );
-  const listData = await listResp.json();
+  const listData = await listResp.json(); // add error handling. json will throw if shopify api errors with non-200.
   const sub = listData.data.webhookSubscriptions.edges
     .map((e: any) => e.node)
     .find((n: any) => n.callbackUrl === webhookUrl);
@@ -68,13 +73,14 @@ export const registerWebhook = async (
               }
             }`,
     );
-    const { data } = await gqlResp.json();
+    const { data } = await gqlResp.json(); // @TODO: add try-catch
     if (data.webhookSubscriptionCreate.userErrors?.length) {
       console.error(
         "\u26A0\uFE0F  Webhook registration user errors: ",
         data.webhookSubscriptionCreate.userErrors,
       );
       await db.collection(MERCHANT_COLLECTION).updateOne(
+        // @TODO: add try-catch
         { shopId },
         {
           $set: {
