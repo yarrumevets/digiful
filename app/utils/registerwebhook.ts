@@ -72,7 +72,7 @@ export const registerWebhook = async (
   if (!mongoData?.[mongoSubsObjectName]?.id && session.accessToken) {
     const gqlResp = await admin.graphql(
       `mutation {
-              webhookSubscriptionCreate(topic: ${JSON.stringify(topic)}, webhookSubscription: { # <--- and here
+              webhookSubscriptionCreate(topic: ${topic}, webhookSubscription: { # <--- and here
                 callbackUrl: "${webhookUrl}",
                 format: JSON
               }) {
