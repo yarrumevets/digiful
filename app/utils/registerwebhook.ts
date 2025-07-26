@@ -107,3 +107,68 @@ export const registerWebhook = async (
     success: true,
   });
 };
+
+export const unsubscribeWebhook = async (
+  shopId: string,
+  // webhookId: string,
+  admin: AdminApiContextWithRest<ShopifyRestResources>,
+  webhookName: string,
+) => {
+  const client = await mongoClientPromise;
+  const db = client.db(process.env.DB_NAME);
+  const mongoData = await db
+    .collection(MERCHANT_COLLECTION)
+    .findOne({ shopId });
+
+  let webhookId; // ex: 'gid://shopify/WebhookSubscription/111111111111'
+  if (mongoData && mongoData[webhookName]) {
+    webhookId = mongoData[webhookName].id;
+  } else {
+    return null; // Just return if not found.
+  }
+
+  // Remove the webhook.
+  const query = `
+    mutation webhookSubscriptionDelete($id: ID!) {
+      webhookSubscriptionDelete(id: $id) {
+        deletedWebhookSubscriptionId
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+  const response = await admin.graphql(query, {
+    variables: { id: webhookId },
+  });
+
+  const responseJson = await response.json();
+
+  console.log(
+    `Remove webhook ${webhookName} - ${webhookId} -- response body: ${JSON.stringify(responseJson)}`,
+  );
+
+  const deletedIdConfirmed =
+    responseJson?.data?.webhookSubscriptionDelete?.deletedWebhookSubscriptionId;
+
+  if (deletedIdConfirmed === webhookId) {
+    console.log("Webhook successfully unsubscribed.");
+  } else {
+    throw new Error("Webhook was found but NOT successfully removed.");
+  }
+
+  // Update the db:
+  const mongoUpdateRes = await db.collection(MERCHANT_COLLECTION).updateOne(
+    { shopId },
+    {
+      $unset: {
+        [webhookName]: 1, // <--- need webhook name to be the value of what this variable holds, not "webhookName"
+      },
+    },
+  );
+
+  console.log("Webhook unsubscribe db update res: ", mongoUpdateRes);
+
+  return resJson(responseJson);
+};

@@ -29,7 +29,7 @@ import { mongoClientPromise } from "app/utils/mongoclient";
 
 import { resJson } from "app/utils/utilities";
 
-import { registerWebhook } from "app/utils/registerwebhook";
+import { registerWebhook, unsubscribeWebhook } from "app/utils/registerwebhook";
 
 // // Handle errors with reload message.
 // import { ErrorFallback } from "app/utils/errormsg";
@@ -57,6 +57,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const mongoData = await db
     .collection(MERCHANT_COLLECTION)
     .findOne({ shopId: shopId });
+
+  // TEMP - FOR TESTING NEW WEBHOOKS
+  unsubscribeWebhook(shopId, admin, "webhookOrdersPaid");
+  unsubscribeWebhook(shopId, admin, "webhookAppSubscriptionsUpdate");
+  unsubscribeWebhook(shopId, admin, "webhookOrdersPaid");
+
   // Verify merchant account exists.
   if (!mongoData) {
     console.error(`No accout found for merchant: ${shopSlug}`);
@@ -76,6 +82,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 `);
   const { data } = await response.json();
+
   const subs = data.appInstallation.activeSubscriptions;
   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
   console.log("!!!!!!!!!!!!!!!!!!! subs: ", subs);
@@ -279,7 +286,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         admin,
         session,
         "" + process.env.APP_UNINSTALLED_ROUTE,
-        "webhooks.webhookAppSubscriptionsUpdate", // mongo
+        "webhooks.webhookAppUninstalled", // mongo
         "APP_UNINSTALLED", // graphql enum
       );
     },
