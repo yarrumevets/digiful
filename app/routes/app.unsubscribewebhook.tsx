@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useFetcher } from "@remix-run/react";
 import { Page, Layout, Text, BlockStack } from "@shopify/polaris";
@@ -43,7 +43,11 @@ export default function Index() {
     });
   };
 
-  useEffect(() => {}, [fetcher.data]);
+  //   const [webhooksList, setWebhooksList] = useState<[string] | []>([]);
+
+  useEffect(() => {
+    console.log("fetcher.data: ", fetcher.data);
+  }, [fetcher.data]);
   useEffect(() => {
     doWebhookUnsubscribe("webhookOrdersPaid");
     doWebhookUnsubscribe("webhookAppSubscriptionsUpdate");
@@ -57,7 +61,7 @@ export default function Index() {
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
-            <Text as="p">Unsubscribe Webhooks</Text>
+            <Text as="h1">Unsubscribe Webhooks</Text>
             {fetcher.data && (
               <Text as="p">
                 {fetcher.data.webhookName
