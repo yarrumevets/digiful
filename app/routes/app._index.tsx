@@ -614,6 +614,16 @@ export default function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Register/verify the app_uninstalled webhook.
+  useEffect(() => {
+    const fd = new FormData();
+    fd.append("actionType", "registerAppUninstalledWebhook");
+    fetcher.submit(fd, {
+      method: "post",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Loader data.
   const [hasActiveSubscription, setHasActiveSubscription] =
     useState<string>("");
