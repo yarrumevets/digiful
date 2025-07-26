@@ -1,0 +1,19 @@
+Run this on all scripts:
+chmod +x pm2start.sh
+
+SCRIPTS:
+
+1) Run with env vars via PM2
+
+npm install -g dotenv-cli
+pm2 start ./pm2start.sh --name digiful
+
+#!/bin/bash
+dotenv npm run start 
+
+2) Pull code, build, restart on PM2
+
+#!/bin/bash
+git pull
+npm run build
+pm2 restart digiful
