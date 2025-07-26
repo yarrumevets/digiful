@@ -273,6 +273,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
     },
 
+    registerAppUninstalledWebhook: async () => {
+      return registerWebhook(
+        shopId,
+        admin,
+        session,
+        "" + process.env.APP_UNINSTALLED_ROUTE,
+        "webhooks.webhookAppSubscriptionsUpdate", // mongo
+        "APP_UNINSTALLED", // graphql enum
+      );
+    },
+
     getAllDigitalProductsFromShop: async () => {
       // Get all products from the Shopify store (not the DB) marked with the digital product tag.
       // @TODO: Add pagination. Currently limited to 250 products.
