@@ -43,10 +43,11 @@ export default function Index() {
     });
   };
 
-  //   const [webhooksList, setWebhooksList] = useState<[string] | []>([]);
+  const [webhooksList, setWebhooksList] = useState<[string] | []>([]);
 
   useEffect(() => {
     console.log("fetcher.data: ", fetcher.data);
+    setWebhooksList((prevWhs) => [...prevWhs, fetch.data.webhookName]);
   }, [fetcher.data]);
   useEffect(() => {
     doWebhookUnsubscribe("webhookOrdersPaid");
@@ -57,18 +58,14 @@ export default function Index() {
 
   return (
     <Page>
-      <TitleBar title="digiful">Unsubscribe Webhooks</TitleBar>
+      <TitleBar title="digiful"></TitleBar>
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>
             <Text as="h1">Unsubscribe Webhooks</Text>
-            {fetcher.data && (
-              <Text as="p">
-                {fetcher.data.webhookName
-                  ? `Unsubscribed: ${fetcher.data.webhookName}`
-                  : "Unsubscribe failed"}
-              </Text>
-            )}
+            {webhooksList.map((webhookListItem) => {
+              return <Text as="p">Webhook: {webhookListItem}</Text>;
+            })}
           </Layout.Section>
         </Layout>
       </BlockStack>
