@@ -22,3 +22,6 @@ database.sqlite
 
 # Digiful specific files
 /app/routes/config/subscriptions.ts
+
+# Scripts that are temp or differ by environment
+/misc_scripts/*.sh
