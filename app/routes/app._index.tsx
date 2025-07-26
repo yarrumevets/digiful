@@ -29,7 +29,7 @@ import { mongoClientPromise } from "app/utils/mongoclient";
 
 import { resJson } from "app/utils/utilities";
 
-import { registerWebhook, unsubscribeWebhook } from "app/utils/registerwebhook";
+import { registerWebhook } from "app/utils/registerwebhook";
 
 // // Handle errors with reload message.
 // import { ErrorFallback } from "app/utils/errormsg";
@@ -57,11 +57,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const mongoData = await db
     .collection(MERCHANT_COLLECTION)
     .findOne({ shopId: shopId });
-
-  // TEMP - FOR TESTING NEW WEBHOOKS
-  unsubscribeWebhook(shopId, admin, "webhookOrdersPaid");
-  unsubscribeWebhook(shopId, admin, "webhookAppSubscriptionsUpdate");
-  unsubscribeWebhook(shopId, admin, "webhookOrdersPaid");
 
   // Verify merchant account exists.
   if (!mongoData) {
