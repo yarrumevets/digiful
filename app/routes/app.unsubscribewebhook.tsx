@@ -3,7 +3,6 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useFetcher } from "@remix-run/react";
 import { Page, Layout, Text, BlockStack } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-// Import Custom Code
 import { authenticate } from "../shopify.server";
 import { resJson } from "app/utils/utilities";
 import { unsubscribeWebhook } from "app/utils/registerwebhook";
@@ -43,11 +42,17 @@ export default function Index() {
     });
   };
 
-  const [webhooksList, setWebhooksList] = useState<[string] | []>([]);
+  const [webhooksList, setWebhooksList] = useState<string[]>([]);
 
   useEffect(() => {
     console.log("fetcher.data: ", fetcher.data);
-    setWebhooksList((prevWhs) => [...prevWhs, fetch.data.webhookName]);
+    // Capture static type.
+    const webhookName = fetcher.data?.webhookName;
+    if (typeof webhookName === "string") {
+      setWebhooksList((prevWhs) => {
+        return [...prevWhs, fetcher.data!.webhookName];
+      });
+    }
   }, [fetcher.data]);
   useEffect(() => {
     doWebhookUnsubscribe("webhookOrdersPaid");
@@ -64,7 +69,11 @@ export default function Index() {
           <Layout.Section>
             <Text as="h1">Unsubscribe Webhooks</Text>
             {webhooksList.map((webhookListItem) => {
-              return <Text as="p">Webhook: {webhookListItem}</Text>;
+              return (
+                <Text as="p" key={webhookListItem}>
+                  Webhook: {webhookListItem}
+                </Text>
+              );
             })}
           </Layout.Section>
         </Layout>
