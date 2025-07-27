@@ -1,32 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useFetcher } from "@remix-run/react";
 import { Page, Layout, Text, BlockStack } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { resJson } from "app/utils/utilities";
-import { unsubscribeWebhook } from "app/utils/registerwebhook";
+import { unsubscribeAllWebhooks } from "app/utils/registerwebhook";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   return resJson({ message: "success", vmId: process.env.VM_ID });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
   const res = await admin.graphql(`query { shop { id name } }`);
   const shopifyData = (await res.json()).data;
   const shopId = shopifyData.shop.id.split("/").pop();
+  const accessToken = "" + session.accessToken;
+  const shopDomain = session.shop;
+  const shopSlug = shopDomain.replace(".myshopify.com", "");
+
   const actions = {
     unsubscribeAllWebhooks: async (webhookName: string) => {
-      const results = await Promise.all([
-        unsubscribeWebhook(shopId, admin, "webhookOrdersPaid"),
-        unsubscribeWebhook(shopId, admin, "webhookAppSubscriptionsUpdate"),
-        unsubscribeWebhook(shopId, admin, "webhookAppUninstalled"),
-      ]);
+      const result = await unsubscribeAllWebhooks(
+        accessToken,
+        shopSlug,
+        shopId,
+      );
+      // unsubscribeWebhook(shopId, admin, "webhookOrdersPaid"),
+      // unsubscribeWebhook(shopId, admin, "webhookAppSubscriptionsUpdate"),
+      // unsubscribeWebhook(shopId, admin, "webhookAppUninstalled"),
       return {
-        webhookOrdersPaid: results[0],
-        webhookAppSubscriptionsUpdate: results[1],
-        webhookAppUninstalled: results[2],
+        actionType: "unsubscribeAllWebhooks",
+        result,
       };
     },
   } as const;
@@ -48,16 +54,16 @@ export default function Index() {
     });
   };
 
-  const [webhooksList, setWebhooksList] = useState<string[] | null>([]);
+  //   const [webhooksList, setWebhooksList] = useState<string[] | null>([]);
 
   useEffect(() => {
     console.log("fetcher.data: ", fetcher.data);
-    if (fetcher.data) {
-      const webhookNames = Object.keys(fetcher.data);
-      setWebhooksList(webhookNames);
-    } else {
-      setWebhooksList([]);
-    }
+    // if (fetcher.data) {
+    //   const webhookNames = Object.keys(fetcher.data);
+    //   setWebhooksList(webhookNames);
+    // } else {
+    //   setWebhooksList([]);
+    // }
   }, [fetcher.data]);
 
   useEffect(() => {
@@ -65,7 +71,7 @@ export default function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  console.log("wh list: ", webhooksList);
+  // console.log("wh list: ", webhooksList);
 
   return (
     <Page>

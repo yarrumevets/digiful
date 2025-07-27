@@ -108,9 +108,60 @@ export const registerWebhook = async (
   });
 };
 
+export const unsubscribeAllWebhooks = async (
+  accessToken: string,
+  shopSlug: string,
+  shopId: string,
+) => {
+  // Find all webhooks registered for this store.
+  const response = await fetch(
+    `https://${shopSlug}.myshopify.com/admin/api/2025-04/webhooks.json`,
+    {
+      headers: {
+        "X-Shopify-Access-Token": accessToken,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  const data = await response.json();
+  const webhooks = data.webhooks;
+  console.log(webhooks);
+
+  // Unregister all webhooks
+  for (const webhook of webhooks) {
+    await fetch(
+      `https://${shopSlug}.myshopify.com/admin/api/2025-04/webhooks/${webhook.id}.json`,
+      {
+        method: "DELETE",
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      },
+    );
+  }
+  // Archive old webhook data
+  const client = await mongoClientPromise;
+  const db = client.db(process.env.DB_NAME);
+  const newDateString = new Date()
+    .toISOString()
+    .split("T")[0]
+    .replace(/-/g, "_");
+  const mongoArchiveResponse = await db
+    .collection(MERCHANT_COLLECTION)
+    .updateOne(
+      { shopId },
+      { $set: { [`archivedWebhooks.${newDateString}`]: webhooks } },
+    );
+  console.log("Mongo archive response: ", mongoArchiveResponse);
+  // Delete records from the database
+  const mongoRemoveWebhooksResponse = await db
+    .collection(MERCHANT_COLLECTION)
+    .updateOne({ shopId }, { $set: { webhooks: {} } });
+  console.log("Mongo remove webhooks response: ", mongoRemoveWebhooksResponse);
+};
+
 export const unsubscribeWebhook = async (
   shopId: string,
-  // webhookId: string,
   admin: AdminApiContextWithRest<ShopifyRestResources>,
   webhookName: string,
 ) => {
