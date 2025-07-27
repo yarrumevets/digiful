@@ -164,6 +164,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const VARIANTS_COLLECTION = "" + process.env.VARIANTS_COLLECTION;
   const DB_NAME = "" + process.env.DB_NAME;
   const { session, admin } = await authenticate.admin(request);
+
+  console.log("<><> SESSION ACCESS TOKEN: ", session.accessToken);
+
   const res = await admin.graphql(`query { shop { id name } }`);
   const shopifyData = (await res.json()).data;
   const shopId = shopifyData.shop.id.split("/").pop();
