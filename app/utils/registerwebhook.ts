@@ -123,6 +123,14 @@ export const unsubscribeWebhook = async (
     .findOne({ shopId });
 
   let webhookId; // ex: 'gid://shopify/WebhookSubscription/111111111111'
+
+  console.log(
+    "<><><><> mongoData: ",
+    mongoData,
+    " ----- webhookName: ",
+    webhookName,
+  );
+
   if (mongoData && mongoData[webhookName]) {
     webhookId = mongoData[webhookName].id;
   } else {
