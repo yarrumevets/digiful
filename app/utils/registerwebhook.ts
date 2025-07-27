@@ -131,8 +131,8 @@ export const unsubscribeWebhook = async (
     webhookName,
   );
 
-  if (mongoData && mongoData[webhookName]) {
-    webhookId = mongoData[webhookName].id;
+  if (mongoData && mongoData.webhooks?.[webhookName]) {
+    webhookId = mongoData.webhooks?.[webhookName].id;
   } else {
     return null; // Just return if not found.
   }
