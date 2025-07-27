@@ -50,7 +50,7 @@ export default function Index() {
     const webhookName = fetcher.data?.webhookName;
     if (typeof webhookName === "string") {
       setWebhooksList((prevWhs) => {
-        return [...prevWhs, fetcher.data!.webhookName];
+        return [...prevWhs, webhookName];
       });
     }
   }, [fetcher.data]);
