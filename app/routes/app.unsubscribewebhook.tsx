@@ -17,10 +17,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const shopifyData = (await res.json()).data;
   const shopId = shopifyData.shop.id.split("/").pop();
   const actions = {
-    unsubscribeWebhooks: async (webhookName: string) => {
+    unsubscribeAllWebhooks: async (webhookName: string) => {
+      const results = await Promise.all([
+        unsubscribeWebhook(shopId, admin, "webhookOrdersPaid"),
+        unsubscribeWebhook(shopId, admin, "webhookAppSubscriptionsUpdate"),
+        unsubscribeWebhook(shopId, admin, "webhookAppUninstalled"),
+      ]);
       return {
-        result: unsubscribeWebhook(shopId, admin, webhookName),
-        webhookName: webhookName,
+        webhookOrdersPaid: results[0],
+        webhookAppSubscriptionsUpdate: results[1],
+        webhookAppUninstalled: results[2],
       };
     },
   } as const;
@@ -33,33 +39,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Index() {
   const fetcher = useFetcher<typeof action>();
-  const doWebhookUnsubscribe = (webhookName: string) => {
+
+  const doWebhooksUnsubscribe = () => {
     const fd = new FormData();
-    fd.append("actionType", "unsubscribeWebhooks");
-    fd.append("webhookName", webhookName);
+    fd.append("actionType", "unsubscribeAllWebhooks");
     fetcher.submit(fd, {
       method: "post",
     });
   };
 
-  const [webhooksList, setWebhooksList] = useState<string[]>([]);
+  const [webhooksList, setWebhooksList] = useState<string[] | null>([]);
 
   useEffect(() => {
     console.log("fetcher.data: ", fetcher.data);
-    // Capture static type.
-    const webhookName = fetcher.data?.webhookName;
-    if (typeof webhookName === "string") {
-      setWebhooksList((prevWhs) => {
-        return [...prevWhs, webhookName];
-      });
+    if (fetcher.data) {
+      const webhookNames = Object.keys(fetcher.data);
+      setWebhooksList(webhookNames);
+    } else {
+      setWebhooksList([]);
     }
   }, [fetcher.data]);
+
   useEffect(() => {
-    doWebhookUnsubscribe("webhookOrdersPaid");
-    doWebhookUnsubscribe("webhookAppSubscriptionsUpdate");
-    doWebhookUnsubscribe("webhookAppUninstalled");
+    doWebhooksUnsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  console.log("wh list: ", webhooksList);
 
   return (
     <Page>
@@ -68,13 +74,15 @@ export default function Index() {
         <Layout>
           <Layout.Section>
             <Text as="h1">Unsubscribe Webhooks</Text>
-            {webhooksList.map((webhookListItem) => {
+            {
+              /* {webhooksList.map((webhookListItem) => {
               return (
                 <Text as="p" key={webhookListItem}>
                   Webhook: {webhookListItem}
                 </Text>
               );
-            })}
+            })} */ ""
+            }
           </Layout.Section>
         </Layout>
       </BlockStack>
