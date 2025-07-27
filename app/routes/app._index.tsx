@@ -173,8 +173,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const client = await mongoClientPromise;
   const db = client.db(DB_NAME);
   const actions = {
-    registerOrdersPaidWebhook: async () => {
-      return registerWebhook(
+    registerAllWebhooks: async () => {
+      await registerWebhook(
         shopId,
         admin,
         session,
@@ -182,10 +182,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         "webhooks.webhookOrdersPaid",
         "ORDERS_PAID",
       );
-    },
-
-    registerAppSubscriptionUpdateWebhook: async () => {
-      return registerWebhook(
+      await registerWebhook(
         shopId,
         admin,
         session,
@@ -193,10 +190,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         "webhooks.webhookAppSubscriptionsUpdate", // mongo
         "APP_SUBSCRIPTIONS_UPDATE", // graphql enum
       );
-    },
-
-    registerAppUninstalledWebhook: async () => {
-      return registerWebhook(
+      await registerWebhook(
         shopId,
         admin,
         session,
@@ -516,30 +510,39 @@ export default function Index() {
   const actionData = useActionData<typeof action>();
   const loaderData = useLoaderData<typeof loader>();
 
-  // Register/verify the orders_paid webhook.
-  useEffect(() => {
-    const fd = new FormData();
-    fd.append("actionType", "registerOrdersPaidWebhook");
-    fetcher.submit(fd, {
-      method: "post",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // // Register/verify the orders_paid webhook.
+  // useEffect(() => {
+  //   const fd = new FormData();
+  //   fd.append("actionType", "registerOrdersPaidWebhook");
+  //   fetcher.submit(fd, {
+  //     method: "post",
+  //   });
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
-  // Register/verify the app_subscription_update webhook.
-  useEffect(() => {
-    const fd = new FormData();
-    fd.append("actionType", "registerAppSubscriptionUpdateWebhook");
-    fetcher.submit(fd, {
-      method: "post",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // // Register/verify the app_subscription_update webhook.
+  // useEffect(() => {
+  //   const fd = new FormData();
+  //   fd.append("actionType", "registerAppSubscriptionUpdateWebhook");
+  //   fetcher.submit(fd, {
+  //     method: "post",
+  //   });
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
-  // Register/verify the app_uninstalled webhook.
+  // // Register/verify the app_uninstalled webhook.
+  // useEffect(() => {
+  //   const fd = new FormData();
+  //   fd.append("actionType", "registerAppUninstalledWebhook");
+  //   fetcher.submit(fd, {
+  //     method: "post",
+  //   });
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
+
   useEffect(() => {
     const fd = new FormData();
-    fd.append("actionType", "registerAppUninstalledWebhook");
+    fd.append("actionType", "registerAllWebhooks");
     fetcher.submit(fd, {
       method: "post",
     });

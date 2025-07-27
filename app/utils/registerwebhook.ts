@@ -49,6 +49,7 @@ export const registerWebhook = async (
   const sub = listData.data.webhookSubscriptions.edges
     .map((e: any) => e.node)
     .find((n: any) => n.callbackUrl === webhookUrl && n.topic === topic);
+  console.log(`Register ${topic} webhook sub ID for shop#${shopId}: `, sub?.id);
   if (sub?.id) {
     return resJson({
       success: true,
@@ -94,6 +95,7 @@ export const registerWebhook = async (
       );
     } else {
       const webhookData = data.webhookSubscriptionCreate.webhookSubscription;
+      console.log("Webhook registration success: ", webhookData);
       webhookData.accessToken = encrypt(session.accessToken);
       await db.collection(MERCHANT_COLLECTION).updateOne(
         { shopId },
