@@ -114,6 +114,8 @@ export const unsubscribeWebhook = async (
   admin: AdminApiContextWithRest<ShopifyRestResources>,
   webhookName: string,
 ) => {
+  console.log("Unsubscribe for ", webhookName, " ( ", shopId, " ) ");
+
   const client = await mongoClientPromise;
   const db = client.db(process.env.DB_NAME);
   const mongoData = await db
