@@ -33,22 +33,26 @@ export const registerWebhook = async (
 
   // Get ALL webhooks and then manually filter, as some (APP_SUBSCRIPTIONS_UPDATE) don't work while others (ORDERS_PAID) do.
   const listResp = await admin.graphql(`
-  query {
-    webhookSubscriptions(first: 100) {
-      edges {
-        node {
-          id
-          topic
-          callbackUrl
+    query {
+      webhookSubscriptions(first: 100) {
+        edges {
+          node {
+            id
+            topic
+            callbackUrl
+          }
         }
       }
     }
-  }
-`);
+  `);
+
   const listData = await listResp.json();
   const sub = listData.data.webhookSubscriptions.edges
     .map((e: any) => e.node)
     .find((n: any) => n.callbackUrl === webhookUrl && n.topic === topic);
+
+  console.log("~~~~~~~~~~~~~ LLLLLL: ", listData.data.webhookSubscriptions);
+
   console.log(`Register ${topic} webhook sub ID for shop#${shopId}: `, sub?.id);
   if (sub?.id) {
     return resJson({
