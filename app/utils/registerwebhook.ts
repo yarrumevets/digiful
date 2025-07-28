@@ -46,15 +46,17 @@ export const registerWebhook = async (
     }
   `);
 
+  // Get existing webhook subscriptions
   const listData = await listResp.json();
   const sub = listData.data.webhookSubscriptions.edges
     .map((e: any) => e.node)
     .find((n: any) => n.callbackUrl === webhookUrl && n.topic === topic);
 
   console.log("~~~~~~~~~~~~~ LLLLLL: ", listData.data.webhookSubscriptions);
+  console.log(`Register ${topic} webhook sub ID for shop#${shopId}: `, sub);
 
-  console.log(`Register ${topic} webhook sub ID for shop#${shopId}: `, sub?.id);
   if (sub?.id) {
+    console.log("Subscription already registered!");
     return resJson({
       success: true,
       alreadyExisted: true,

@@ -198,6 +198,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         "webhooks.webhookAppUninstalled", // mongo
         "APP_UNINSTALLED", // graphql enum
       );
+
+      return resJson({
+        success: true,
+        actionType: "getAllDigitalProductsFromShop",
+      });
     },
 
     getAllDigitalProductsFromShop: async () => {
