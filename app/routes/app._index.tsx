@@ -80,7 +80,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const subs = data.appInstallation.activeSubscriptions;
   const hasActiveSubscription = subs.length > 0 && subs[0].status === "ACTIVE";
-  console.log("!!!!!!!!!!!!!!!!!!! subs: ", subs);
+  console.log(shopDomain, " : !!!!!!!!!!!!!!!!!!! subs: ", subs);
 
   if (!hasActiveSubscription) {
     return { hasActiveSubscription: false, vmId };
