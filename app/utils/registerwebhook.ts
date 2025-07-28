@@ -20,17 +20,13 @@ export const registerWebhook = async (
 ) => {
   const client = await mongoClientPromise;
   const db = client.db(process.env.DB_NAME);
-
   // Example data that is passed in:
   const webhookUrl = "" + process.env.WEBHOOK_URL + webhookRoute;
-
   const mongoData = await db
     .collection(MERCHANT_COLLECTION)
     .findOne({ shopId });
   // Check for existing webhook
-
   // @TODO: add try-catch
-
   // Get ALL webhooks and then manually filter, as some (APP_SUBSCRIPTIONS_UPDATE) don't work while others (ORDERS_PAID) do.
   const listResp = await admin.graphql(`
     query {
@@ -45,16 +41,13 @@ export const registerWebhook = async (
       }
     }
   `);
-
   // Get existing webhook subscriptions
   const listData = await listResp.json();
   const sub = listData.data.webhookSubscriptions.edges
     .map((e: any) => e.node)
     .find((n: any) => n.callbackUrl === webhookUrl && n.topic === topic);
-
   console.log("~~~~~~~~~~~~~ LLLLLL: ", listData.data.webhookSubscriptions);
   console.log(`Register ${topic} webhook sub ID for shop#${shopId}: `, sub);
-
   if (sub?.id) {
     console.log("Subscription already registered!");
     return resJson({
@@ -62,7 +55,6 @@ export const registerWebhook = async (
       alreadyExisted: true,
     });
   }
-
   if (!mongoData?.[mongoSubsObjectName]?.id && session.accessToken) {
     const gqlResp = await admin.graphql(
       `mutation {
@@ -134,7 +126,6 @@ export const unsubscribeAllWebhooks = async (
   const data = await response.json();
   const webhooks = data.webhooks;
   console.log(webhooks);
-
   // Unregister all webhooks
   for (const webhook of webhooks) {
     await fetch(
@@ -152,8 +143,9 @@ export const unsubscribeAllWebhooks = async (
   const db = client.db(process.env.DB_NAME);
   const newDateString = new Date()
     .toISOString()
-    .split("T")[0]
-    .replace(/-/g, "_");
+    .replace(/[:.-]/g, "_")
+    .replace("T", "_")
+    .slice(0, 19);
   const mongoArchiveResponse = await db
     .collection(MERCHANT_COLLECTION)
     .updateOne(

@@ -167,6 +167,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   console.log("<><> SESSION ACCESS TOKEN: ", session.accessToken);
 
+  console.log(
+    "PROC ENV App uninstalled route: ",
+    process.env.APP_UNINSTALLED_ROUTE,
+  );
+
   const res = await admin.graphql(`query { shop { id name } }`);
   const shopifyData = (await res.json()).data;
   const shopId = shopifyData.shop.id.split("/").pop();
