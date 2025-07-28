@@ -66,6 +66,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         shopId: shopId, // 99999999999
         shopSlug, // 'quickstart-a1b2c3d4',
         shopName, // 'Quickstart (a1b2c3d4)',
+        shopDomain,
         shopPrefixHash,
         accountStatus: "Initialized",
         currencyCode: currency.currencyCode, // 'CAD'
